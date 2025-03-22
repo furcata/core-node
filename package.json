@@ -14,7 +14,8 @@
     "node": ">=22"
   },
   "files": [
-    "lib"
+    "lib",
+    "tsconfig.json"
   ],
   "exports": {
     "./model": "./lib/model/index.js",
