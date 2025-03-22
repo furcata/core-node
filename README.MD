@@ -18,6 +18,15 @@ or from GitHub
 $ npm i github:furcata/core-node --save
 ```
 
+Or add manually for local development
+```json`
+{
+  "dependencies": {
+    "@furcata/core-node": "file:../core-node",
+  }
+}
+```
+
 ## Examples
 
 ### Basic usage

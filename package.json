@@ -50,6 +50,6 @@
     "eslint": "eslint",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "postinstall": "npm run build"
+    "postinstall": "npm run compile"
   }
 }
