@@ -1,4 +1,4 @@
-# FabricElements Shared Helpers
+# Furcata Core Node
 
 Use `@furcata/core-node` on Firebase projects.
 
