@@ -10,7 +10,7 @@ import {MessageQueue} from '../interface/queue.js';
  * Account
  */
 export namespace Account {
-  export const enum Status {
+  export enum Status {
     active = 'active',
     inactive = 'inactive',
     suspended = 'suspended',
@@ -20,7 +20,7 @@ export namespace Account {
     review = 'review',
   }
 
-  export const enum Roles {
+  export enum Roles {
     agent = 'agent',
     admin = 'admin',
     owner = 'owner',

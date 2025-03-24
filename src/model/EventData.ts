@@ -7,19 +7,19 @@ import {BasePlaceData} from '../interface/place.js';
 import {Block} from './Block.js';
 
 export namespace EventData {
-  export const enum Type {
+  export enum Type {
     inPerson = 'inPerson',
     online = 'online',
   }
 
-  export const enum Frequency {
+  export enum Frequency {
     once = 'once',
     daily = 'daily',
     weekly = 'weekly',
     monthly = 'monthly',
   }
 
-  export const enum Status {
+  export enum Status {
     draft = 'draft',
     scheduled = 'scheduled',
     active = 'active',

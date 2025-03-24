@@ -5,7 +5,7 @@
 import {BaseFirestore} from '../interface/base_db.js';
 
 export namespace MessagingEvent {
-  export const enum Type {
+  export enum Type {
     // message is in-app messaging
     message = 'message',
     sms = 'sms',
@@ -21,7 +21,7 @@ export namespace MessagingEvent {
     post = 'post',
   }
 
-  export const enum Status {
+  export enum Status {
     opened = 'opened',
     sender = 'sender',
     pending = 'pending',

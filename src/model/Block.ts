@@ -3,7 +3,7 @@
  * Copyright Furcata. All Rights Reserved.
  */
 export namespace Block {
-  export const enum Type {
+  export enum Type {
     download = 'download',
     image = 'image',
     text = 'text',

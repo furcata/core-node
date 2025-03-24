@@ -4,7 +4,7 @@ import {BaseFirestore} from '../interface/base_db.js';
  * Post
  */
 export namespace Post {
-  export const enum Status {
+  export enum Status {
     pending = 'pending',
     active = 'active',
     removed = 'removed',
