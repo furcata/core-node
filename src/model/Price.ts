@@ -23,6 +23,7 @@ export namespace Price {
     // Limit the number of users that can pay for this price
     limit?: number;
     type?: Type;
+    uid?: string | null;
     users?: string[]; // user ids that have paid for this price
   }
 }
