@@ -21,7 +21,8 @@ export namespace Price {
     account: string;
     amount?: number;
     currency?: string;
-    event?: string;
+    // The product this price is associated with
+    source?: string;
     image?: string;
     label?: string;
     description?: string;
