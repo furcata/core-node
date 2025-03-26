@@ -17,6 +17,7 @@ export namespace Price {
     amount?: number;
     currency?: string;
     event?: string;
+    image?: string;
     label?: string;
     description?: string;
     // Limit the number of users that can pay for this price
