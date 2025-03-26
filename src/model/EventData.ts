@@ -8,7 +8,7 @@ import {Block} from './Block.js';
 
 export namespace EventData {
   export enum Type {
-    inPerson = 'inPerson',
+    inPerson = 'in_person',
     online = 'online',
   }
 
@@ -44,10 +44,13 @@ export namespace EventData {
     status?: Status | any;
     uid?: string | null;
     blocks?: Block.Interface[],
+    // @deprecated Use Price instead
     currency?: string;
+    // @deprecated Use Price instead
     amount?: number;
     users?: string[]; // user ids
     hosts?: string[]; // user ids
+    // Limit the number of users that can join the event
     limit?: number;
     successMessage?: string;
     redirectUrl?: string;
