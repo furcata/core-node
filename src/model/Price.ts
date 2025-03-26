@@ -12,6 +12,7 @@ export namespace Price {
   }
 
   export interface Interface extends BaseFirestore {
+    account: string;
     active?: boolean;
     amount?: number;
     currency?: string;
