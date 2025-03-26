@@ -34,7 +34,7 @@ coverage
 build
 build/*/*
 build/Release
-lib
+#lib
 dist/*
 src/**.js
 functions/**.js

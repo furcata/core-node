@@ -50,7 +50,6 @@
     "compile:watch": "tsc --watch -p ./tsconfig.json",
     "eslint": "eslint",
     "lint": "eslint",
-    "lint:fix": "eslint --fix",
-    "postinstall": "npm run compile"
+    "lint:fix": "eslint --fix"
   }
 }
