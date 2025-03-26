@@ -7,8 +7,8 @@ import {BaseFirestore} from '../interface/index.js';
  */
 export namespace Price {
   export enum Type {
-    oneTime = 'one_time',
-    recurring = 'recurring',
+    event = 'event',
+    product = 'product',
   }
 
   export enum Visibility {
