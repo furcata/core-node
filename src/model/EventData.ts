@@ -23,13 +23,7 @@ export namespace EventData {
     draft = 'draft',
     scheduled = 'scheduled',
     active = 'active',
-    canceled = 'canceled'
-  }
-
-  export enum Visibility {
-    public = 'public',
-    private = 'private',
-    unlisted = 'unlisted',
+    archived = 'archived'
   }
 
   export interface Interface extends BaseFirestore, BasePlaceData {
@@ -40,7 +34,6 @@ export namespace EventData {
     media?: string[];
     type?: Type | any;
     frequency?: Frequency | any;
-    visibility?: Visibility | any;
     status?: Status | any;
     uid?: string | null;
     blocks?: Block.Interface[],

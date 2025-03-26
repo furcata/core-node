@@ -11,9 +11,14 @@ export namespace Price {
     recurring = 'recurring',
   }
 
+  export enum Visibility {
+    public = 'public',
+    private = 'private',
+    unlisted = 'unlisted',
+  }
+
   export interface Interface extends BaseFirestore {
     account: string;
-    active?: boolean;
     amount?: number;
     currency?: string;
     event?: string;
@@ -25,5 +30,6 @@ export namespace Price {
     type?: Type;
     uid?: string | null;
     users?: string[]; // user ids that have paid for this price
+    visibility?: Visibility;
   }
 }
