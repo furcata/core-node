@@ -51,5 +51,10 @@ export namespace EventData {
     startTime?: any;
     endTime?: any;
     runHour?: number;
+    // Track
+    clicks?: number;
+    views?: number;
+    checkout?: number;
+    booked?: number;
   }
 }

@@ -32,5 +32,10 @@ export namespace Price {
     uid?: string | null;
     users?: string[]; // user ids that have paid for this price
     visibility?: Visibility;
+    // Track
+    clicks?: number;
+    views?: number;
+    checkout?: number;
+    booked?: number;
   }
 }
