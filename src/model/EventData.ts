@@ -50,6 +50,7 @@ export namespace EventData {
     successUrl?: string;
     startTime?: any;
     endTime?: any;
+    duration?: number; // in minutes
     runHour?: number;
     // Track
     clicks?: number;
