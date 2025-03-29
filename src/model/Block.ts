@@ -13,6 +13,10 @@ export namespace Block {
     location = 'location',
     audio = 'audio',
     link = 'link',
+    tiktok = 'tiktok',
+    instagram = 'instagram',
+    facebook = 'facebook',
+    twitter = 'twitter',
   }
 
   export interface Interface {
