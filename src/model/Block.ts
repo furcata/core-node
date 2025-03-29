@@ -19,5 +19,7 @@ export namespace Block {
     type: Type,
     value: any,
     label: string,
+    width?: number,
+    height?: number,
   }
 }
