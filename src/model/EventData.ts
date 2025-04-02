@@ -45,9 +45,6 @@ export namespace EventData {
     hosts?: string[]; // user ids
     // Limit the number of users that can join the event
     limit?: number;
-    successMessage?: string;
-    redirectUrl?: string;
-    successUrl?: string;
     startTime?: any;
     endTime?: any;
     duration?: number; // in minutes
