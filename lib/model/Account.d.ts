@@ -3,8 +3,8 @@
  * Copyright Furcata. All Rights Reserved.
  */
 import { User } from '@fabricelements/shared-helpers/user';
-import { BaseFirestore } from '../interface';
-import { MessageQueue } from '../interface';
+import { BaseFirestore } from '../interface/base_db.js';
+import { MessageQueue } from '../interface/queue.js';
 /**
  * Account
  */
