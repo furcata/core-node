@@ -34,12 +34,8 @@ coverage
 build
 build/*/*
 build/Release
-lib
 dist/*
 src/**.js
-functions/**.js
-functions/lib/*
-lib/*/*
 
 # Dependency directories
 node_modules
