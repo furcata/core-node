@@ -17,6 +17,11 @@ export declare namespace Account {
         draft = "draft",
         review = "review"
     }
+    enum Type {
+        business = "business",
+        government = "government",
+        nonProfit = "non_profit"
+    }
     enum Roles {
         agent = "agent",
         admin = "admin",
@@ -161,6 +166,7 @@ export declare namespace Account {
         businessName?: string;
         description?: string;
         status?: Status;
+        type?: Type;
         uid?: string;
         links?: User.InterfaceLinks;
         companyType?: CompanyType;

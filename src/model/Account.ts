@@ -20,6 +20,12 @@ export namespace Account {
     review = 'review',
   }
 
+  export enum Type {
+    business = 'business',
+    government = 'government',
+    nonProfit = 'non_profit',
+  }
+
   export enum Roles {
     agent = 'agent',
     admin = 'admin',
@@ -208,6 +214,7 @@ export namespace Account {
     businessName?: string;
     description?: string;
     status?: Status;
+    type?: Type;
     uid?: string;
     links?: User.InterfaceLinks,
     // Registration
