@@ -106,6 +106,21 @@ export namespace Account {
     hospitality = 'HOSPITALITY',
     insurance = 'INSURANCE',
     legal = 'LEGAL',
+    manufacturing = 'MANUFACTURING',
+    media = 'MEDIA',
+    online = 'ONLINE',
+    professionalServices = 'PROFESSIONAL_SERVICES',
+    rawMaterials = 'RAW_MATERIALS',
+    realEstate = 'REAL_ESTATE',
+    religion = 'RELIGION',
+    retail = 'RETAIL',
+    jewelry = 'JEWELRY',
+    technology = 'TECHNOLOGY',
+    telecommunications = 'TELECOMMUNICATIONS',
+    transportation = 'TRANSPORTATION',
+    travel = 'TRAVEL',
+    electronics = 'ELECTRONICS',
+    notForProfit = 'NOT_FOR_PROFIT',
   }
 
   // BusinessRegionsOfOperations accepted values:

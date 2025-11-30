@@ -82,7 +82,22 @@ export declare namespace Account {
         healthcare = "HEALTHCARE",
         hospitality = "HOSPITALITY",
         insurance = "INSURANCE",
-        legal = "LEGAL"
+        legal = "LEGAL",
+        manufacturing = "MANUFACTURING",
+        media = "MEDIA",
+        online = "ONLINE",
+        professionalServices = "PROFESSIONAL_SERVICES",
+        rawMaterials = "RAW_MATERIALS",
+        realEstate = "REAL_ESTATE",
+        religion = "RELIGION",
+        retail = "RETAIL",
+        jewelry = "JEWELRY",
+        technology = "TECHNOLOGY",
+        telecommunications = "TELECOMMUNICATIONS",
+        transportation = "TRANSPORTATION",
+        travel = "TRAVEL",
+        electronics = "ELECTRONICS",
+        notForProfit = "NOT_FOR_PROFIT"
     }
     enum BusinessRegionsOfOperations {
         africa = "AFRICA",
