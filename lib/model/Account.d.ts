@@ -200,7 +200,7 @@ export declare namespace Account {
          * Examples:
          * If name and businessName match: businessName
          * If they don't match: businessName (name)
-         * This works for example in case of registering a government organization that sends on behalf of eleted official
+         * This works for example in case of registering a government organization that sends on behalf of elected official
          */
         useName?: string;
         /**
