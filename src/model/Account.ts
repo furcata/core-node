@@ -222,11 +222,38 @@ export namespace Account {
    * Account
    */
   export interface Interface extends BaseFirestore, MessageQueue {
+    /**
+     * Preferred language
+     */
     language?: string;
+    /**
+     * Image path
+     */
     image?: string;
+    /**
+     * Full image url for quick use
+     */
     imageURL?: string;
+    /**
+     * Account Name
+     * It should be the legal name or in case of sending on behalf an eleted official, use that name
+     */
     name?: string;
+    /**
+     * Legal Business name
+     */
     businessName?: string;
+    /**
+     * The name to use.
+     * Examples:
+     * If name and businessName match: businessName
+     * If they don't match: businessName (name)
+     * This works for example in case of registering a government organization that sends on behalf of eleted official
+     */
+    useName?: string;
+    /**
+     * Public site description
+     */
     description?: string;
     status?: Status;
     type?: Type;
@@ -248,6 +275,10 @@ export namespace Account {
     appToPersonUseCase?: AppToPersonUseCase;
     tollFreeUseCase?: string;
     useCaseDescription?: string;
+    /**
+     * Shorter and to the point to use on the opt-in consent
+     */
+    useCaseDescriptionCTA?: string;
     // Address
     postalCode?: string;
     area?: string; // Region
