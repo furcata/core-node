@@ -274,11 +274,20 @@ export namespace Account {
     brandType?: BrandType;
     appToPersonUseCase?: AppToPersonUseCase;
     tollFreeUseCase?: string;
+    /**
+     * Detailed description of the use case to use on the 10DLC registration and for Twilio to understand the use case and be able to approve it.
+     */
     useCaseDescription?: string;
     /**
      * Shorter and to the point to use on the opt-in consent
      */
     useCaseDescriptionCTA?: string;
+    /**
+     * This is used to skip the automatic header that is added to the top of the message for compliance reasons.
+     * This is a custom feature for bulk and test messages in case the customer wants to use their own header or put the identification on the footer.
+     * This should not be used for regular messages.
+     */
+    skipAutomaticHeader?: boolean;
     // Address
     postalCode?: string;
     area?: string; // Region
