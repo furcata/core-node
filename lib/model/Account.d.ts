@@ -234,11 +234,11 @@ export declare namespace Account {
          */
         useCaseDescriptionCTA?: string;
         /**
-         * This is used to skip the automatic header that is added to the top of the message for compliance reasons.
+         * This is used to turn on/off the automatic header that is added to the top of the message for compliance reasons.
          * This is a custom feature for bulk and test messages in case the customer wants to use their own header or put the identification on the footer.
-         * This should not be used for regular messages.
+         * This should not be used for transactional messages.
          */
-        skipAutomaticHeader?: boolean;
+        automaticHeader?: boolean;
         postalCode?: string;
         area?: string;
         city?: string;
