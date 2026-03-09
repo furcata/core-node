@@ -46,7 +46,7 @@ export default tseslint.config(
         jsDocParsingMode: 'type-info',
         ecmaVersion: 'latest',
         sourceType: 'module',
-        tsconfigRootDir: './',
+        tsconfigRootDir: import.meta.dirname,
         ecmaFeatures: {
           modules: true,
           spread: true,
