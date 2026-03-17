@@ -6,6 +6,6 @@ export interface MessageQueue {
   pending?: number;
   ready?: number;
   sender?: number;
-  queued?: number;
+  sending?: number;
   counted?: any;
 }
