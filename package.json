@@ -30,13 +30,15 @@
     "@types/lodash": "^4.17.24",
     "@types/node": "^25.9.1",
     "eslint": "^10.4.1",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.60.1",
-    "typescript": "^6.0.3"
+    "vitest": "^4.1.8"
   },
   "overrides": {
     "eslint": "^10.4.1"
   },
   "scripts": {
+    "test": "vitest run",
     "build": "npm run clear && npm run lint && npm run compile",
     "build:watch": "npm run clear && npm run lint && npm run compile:watch",
     "clear": "rm -rf ./lib",
