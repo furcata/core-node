@@ -64,9 +64,10 @@ absolute compliance requirements.
 - **External URL protection.** **Never** clean up, alter, shorten, or remove markdown links,
   `{@link ...}` references, or external URL links found within existing comments. (`max-len` is
   configured with `ignoreUrls`, so long URLs are intentionally allowed.)
-- **Document the "why."** Always explain intent/rationale, document parameters (`@param`), return
-  specifications (`@returns` — note this repo's ESLint sets the JSDoc `tagNamePreference` so that
-  `returns` is written as `@return`), and exception paths (`@throws`).
+- **Document the "why."** Always explain intent/rationale, document parameters (`@param`), the
+  return specification, and exception paths (`@throws`). For the return tag, **use `@return`
+  (singular)**: this repo's ESLint config sets the JSDoc `tagNamePreference` to rewrite `returns`
+  to `return`, so `@return` is the required form.
 - **License header.** Preserve the existing top-of-file banner used across `src/`:
   `/** @license  Copyright Furcata. All Rights Reserved. */`.
 - **Cross-references.** Prefer `{@link Name}` to connect related enums/interfaces, matching the
