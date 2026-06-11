@@ -19,7 +19,9 @@ export interface BaseFirestore {
    */
   id?: string;
   /**
-   * When `true`, this document has been marked for inclusion in backup exports.
+   * Backup status flag for long-term historical storage.
+   * When `true`, the document has been successfully backed up to the
+   * historical long-term database. When `false`, the backup is still pending.
    */
   backup?: boolean;
   /**
