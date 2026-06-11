@@ -115,7 +115,7 @@ export namespace Account {
    * `'LOW_VOLUME_STANDARD'`, and `'STANDARD'`.
    */
   export enum BrandType {
-    /// SOLE_PROPRIETOR is only available for the US, but we don't use it
+    // SOLE_PROPRIETOR is only available for the US, but we don't use it
     soleProprietor = 'SOLE_PROPRIETOR',
     lowVolumeStandard = 'LOW_VOLUME_STANDARD',
     standard = 'STANDARD',
@@ -345,24 +345,24 @@ export namespace Account {
    */
   export interface Interface extends BaseFirestore, MessageQueue {
     /**
-     * Preferred language
+     * Preferred language.
      */
     language?: string;
     /**
-     * Image path
+     * Image path.
      */
     image?: string;
     /**
-     * Full image url for quick use
+     * Full image URL for quick use.
      */
     imageURL?: string;
     /**
-     * Account Name
+     * Account name.
      * It should be the legal name or in case of sending on behalf an eleted official, use that name
      */
     name?: string;
     /**
-     * Legal Business name
+     * Legal business name.
      */
     businessName?: string;
     /**
@@ -374,7 +374,7 @@ export namespace Account {
      */
     useName?: string;
     /**
-     * Public site description
+     * Public site description.
      */
     description?: string;
     /**
@@ -469,7 +469,7 @@ export namespace Account {
      */
     useCaseDescription?: string;
     /**
-     * Shorter and to the point to use on the opt-in consent
+     * Shorter and to the point to use on the opt-in consent.
      */
     useCaseDescriptionCTA?: string;
     /**

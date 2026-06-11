@@ -297,24 +297,24 @@ export declare namespace Account {
      */
     interface Interface extends BaseFirestore, MessageQueue {
         /**
-         * Preferred language
+         * Preferred language.
          */
         language?: string;
         /**
-         * Image path
+         * Image path.
          */
         image?: string;
         /**
-         * Full image url for quick use
+         * Full image URL for quick use.
          */
         imageURL?: string;
         /**
-         * Account Name
+         * Account name.
          * It should be the legal name or in case of sending on behalf an eleted official, use that name
          */
         name?: string;
         /**
-         * Legal Business name
+         * Legal business name.
          */
         businessName?: string;
         /**
@@ -326,7 +326,7 @@ export declare namespace Account {
          */
         useName?: string;
         /**
-         * Public site description
+         * Public site description.
          */
         description?: string;
         /**
@@ -420,7 +420,7 @@ export declare namespace Account {
          */
         useCaseDescription?: string;
         /**
-         * Shorter and to the point to use on the opt-in consent
+         * Shorter and to the point to use on the opt-in consent.
          */
         useCaseDescriptionCTA?: string;
         /**

@@ -1,3 +1,7 @@
+/**
+ * @license
+ * Copyright Furcata. All Rights Reserved.
+ */
 import {BaseFirestore} from '../interface/base_db.js';
 
 /**
