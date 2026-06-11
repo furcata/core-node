@@ -16,7 +16,7 @@ export enum PlaceType {
 }
 
 /**
- * Extend this interface to add place data as part of the main object
+ * Extend this interface to add place data as part of the main object.
  */
 export interface BasePlaceData {
   /**

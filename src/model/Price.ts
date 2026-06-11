@@ -1,10 +1,8 @@
-import {BaseFirestore} from '../interface/base_db.js';
-
 /**
  * @license
  * Copyright Furcata. All Rights Reserved.
- * Uses stripe price structure
  */
+import {BaseFirestore} from '../interface/base_db.js';
 
 /**
  * Namespace for price models that represent purchasable items (event tickets,
