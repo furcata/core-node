@@ -51,9 +51,10 @@ export namespace Block {
     /**
      * The raw content or resource identifier for this block (e.g., a URL for
      * an image or video, plain text for a text block, coordinates for a
-     * location block).
+     * location block as `Record<string, unknown>`, or an ordered list as
+     * `unknown[]`).
      */
-    value: any,
+    value: string | number | Record<string, unknown> | unknown[],
     /**
      * Human-readable label or caption displayed alongside the block content.
      */

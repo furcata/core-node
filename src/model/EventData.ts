@@ -80,16 +80,22 @@ export namespace EventData {
     media?: string[];
     /**
      * Event format; see {@link Type} for accepted values.
+     * Accepts a typed enum member or a raw string for forward-compatibility
+     * with values stored in Firestore before this enum existed.
      */
-    type?: Type | any;
+    type?: Type | string;
     /**
      * Recurrence cadence; see {@link Frequency} for accepted values.
+     * Accepts a typed enum member or a raw string for forward-compatibility
+     * with values stored in Firestore before this enum existed.
      */
-    frequency?: Frequency | any;
+    frequency?: Frequency | string;
     /**
      * Current lifecycle status; see {@link Status} for accepted values.
+     * Accepts a typed enum member or a raw string for forward-compatibility
+     * with values stored in Firestore before this enum existed.
      */
-    status?: Status | any;
+    status?: Status | string;
     /**
      * Firebase Auth UID of the user who created this event, or `null` for
      * system-generated events.

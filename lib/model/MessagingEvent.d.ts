@@ -96,8 +96,10 @@ export declare namespace MessagingEvent {
         body?: string;
         /**
          * Channel type of this event; see {@link Type} for accepted values.
+         * Accepts a typed enum member or a raw string for forward-compatibility
+         * with values stored in Firestore before this enum existed.
          */
-        type?: Type | any;
+        type?: Type | string;
         /**
          * Firebase Auth UID of the user who originated this event, or `null` for
          * system-generated events.
