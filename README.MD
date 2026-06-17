@@ -1,5 +1,7 @@
 # Furcata Core Node
 
+[![Node CI](https://github.com/furcata/core-node/actions/workflows/nodejs.yml/badge.svg)](https://github.com/furcata/core-node/actions/workflows/nodejs.yml)
+
 `@furcata/core-node` is the shared **TypeScript data-model and interface library** for the
 Furcata platform. It is consumed as a dependency by Furcata's Firebase Cloud Functions backends,
 providing a single, strongly-typed source of truth for the Firestore document shapes, enums, and
