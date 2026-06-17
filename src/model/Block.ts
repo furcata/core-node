@@ -3,6 +3,8 @@
  * Copyright Furcata. All Rights Reserved.
  */
 
+import { EventData } from "./EventData.js";
+
 /**
  * Namespace for content-block primitives used to compose rich-media sections
  * within {@link EventData.Interface} and other structured content documents.
