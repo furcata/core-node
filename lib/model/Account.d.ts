@@ -454,6 +454,10 @@ export declare namespace Account {
          */
         country?: string;
         /**
+         * UTC offset in minutes for the place's local timezone.
+         */
+        utcOffset?: number;
+        /**
          * Custom domain associated with this account (e.g., `"example.com"`), used
          * for domain-based authentication and white-labelling.
          */

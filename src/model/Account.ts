@@ -504,6 +504,10 @@ export namespace Account {
      * ISO 3166-1 alpha-2 country code for the business address (e.g., `"US"`).
      */
     country?: string;
+    /**
+     * UTC offset in minutes for the place's local timezone.
+     */
+    utcOffset?: number;
     // Domain
     /**
      * Custom domain associated with this account (e.g., `"example.com"`), used
