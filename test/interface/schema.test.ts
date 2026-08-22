@@ -384,13 +384,17 @@ describe('parse plumbing', () => {
 /**
  * Package-wide null and optionality policy.
  *
- * `tsconfig.json` sets `strictNullChecks: false`, under which `null` is
- * assignable to every type. Every `| null` annotation in this package is
- * therefore **unenforced by our own compiler**, while still being emitted into
- * the shipped `.d.ts` and enforced in a consumer that compiles strictly. That
- * asymmetry means a schema rejecting `null` where the interface promises
- * `| null` — or accepting it where the interface does not — is a real defect
- * that nothing in this repository's type checking can catch.
+ * `tsconfig.json` previously set `strictNullChecks: false`, under which `null`
+ * was assignable to every type, leaving every `| null` annotation in this
+ * package **unenforced by our own compiler** while still being emitted into the
+ * shipped `.d.ts` and enforced in a consumer that compiles strictly. That flag
+ * is now enabled, so the annotations are enforced locally too.
+ *
+ * These tests remain the primary enforcement, because the asymmetry they guard
+ * is not one the compiler can see: a schema rejecting `null` where the interface
+ * promises `| null` — or accepting it where the interface does not — is a
+ * runtime-versus-declaration mismatch, and no amount of type checking compares
+ * those two artifacts against each other.
  *
  * These tests are the enforcement. Each entry states, explicitly, which keys
  * accept `null` and which are required, and the assertions compare that

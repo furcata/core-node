@@ -42,7 +42,10 @@ export default tseslint.config(
     languageOptions: {
       sourceType: 'module',
       parserOptions: {
-        project: './tsconfig.json',
+        project: [
+          './tsconfig.json',
+          './tsconfig.test.json',
+        ],
         jsDocParsingMode: 'type-info',
         ecmaVersion: 'latest',
         sourceType: 'module',
@@ -57,6 +60,7 @@ export default tseslint.config(
     },
     files: [
       'src/**/*.ts',
+      'test/**/*.ts',
     ],
     rules: {
       'no-restricted-syntax': [

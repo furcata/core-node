@@ -316,7 +316,7 @@ describe('Block.Schema', () => {
   describe('unknown-key policy', () => {
     it('should preserve an undeclared field rather than dropping it', () => {
       const parsed = Block.parse({ ...validBlock(), alt: 'kept' });
-      expect(parsed['alt']).toBe('kept');
+      expect((parsed as unknown as Record<string, unknown>)['alt']).toBe('kept');
     });
   });
 

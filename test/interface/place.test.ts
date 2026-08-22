@@ -459,7 +459,7 @@ describe('PlaceDataSchema', () => {
   describe('unknown-key policy', () => {
     it('should preserve an undeclared field rather than dropping it', () => {
       const parsed = parsePlaceData({ ...validPlace(), legacyField: 'kept' });
-      expect(parsed['legacyField']).toBe('kept');
+      expect((parsed as unknown as Record<string, unknown>)['legacyField']).toBe('kept');
     });
   });
 

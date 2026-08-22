@@ -150,11 +150,14 @@ export namespace Idempotency {
   /**
    * Schema for {@link Response}.
    *
-   * {@link Response.body} is required **and** nullable, which in this repository
-   * needs `requiredKey`: zod infers a required `z.nullable` key as optional
-   * under `strictNullChecks: false`. See that helper for why. `null` here means
-   * the original response genuinely had no body, which is a different claim from
-   * the field being absent, so the distinction has to survive.
+   * {@link Response.body} is required **and** nullable. It is wrapped in
+   * `requiredKey` because zod inferred a required `z.nullable` key as optional
+   * under the `strictNullChecks: false` setting this package previously used.
+   * That setting is now enabled and the inference is correct without the
+   * wrapper, which is retained pending a deliberate removal; see that helper.
+   * `null` here means the original response genuinely had no body, which is a
+   * different claim from the field being absent, so the distinction has to
+   * survive.
    */
   const responseSchema = z.looseObject({
     /**

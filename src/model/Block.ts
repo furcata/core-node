@@ -114,11 +114,13 @@ export namespace Block {
      * enforce rather than this schema's.
      *
      * Wrapped in `requiredKey` because this key is required and its schema is a
-     * `z.union`, which zod infers as an optional key under this repository's
-     * `strictNullChecks: false` setting. Without the wrapper {@link parse} would
-     * return a type claiming `value` may be absent when at runtime it never is.
-     * The compile-time proof below is what surfaced that; see `requiredKey` for
-     * the full explanation.
+     * `z.union`, which zod inferred as an optional key under the
+     * `strictNullChecks: false` setting this package previously used. Without
+     * the wrapper {@link parse} would have returned a type claiming `value` may
+     * be absent when at runtime it never is. `strictNullChecks` is now enabled
+     * and the inference is correct without the wrapper, which is retained here
+     * only so that removing it is a deliberate change with its own tests rather
+     * than a side effect of a compiler-flag change; see `requiredKey`.
      */
     value: requiredKey(blockValueSchema, 'Expected a string, number, object or array block value'),
     /**

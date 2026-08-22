@@ -127,7 +127,7 @@ describe('Reservation.Schema', () => {
   describe('unknown-key policy', () => {
     it('should preserve an undeclared field rather than dropping it', () => {
       const parsed = Reservation.parse({...validEntry(), seat: 'A1'});
-      expect(parsed['seat']).toBe('A1');
+      expect((parsed as unknown as Record<string, unknown>)['seat']).toBe('A1');
     });
   });
 

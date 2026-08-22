@@ -60,15 +60,19 @@ signature `base_db.ts` `[x: string]: any`.
 
 ### 2.2 Tooling that does not enforce what it appears to
 
-Three settings mean the compiler and linter are **more permissive than they look**. This is
-recorded so nobody mistakes a green build for a strictness guarantee:
+Three settings previously meant the compiler and linter were **more permissive than they looked**.
+Two have since been corrected; the remaining one is recorded so nobody mistakes a green build for a
+strictness guarantee:
 
 - `eslint.config.js` sets `@typescript-eslint/no-explicit-any: ['off']` — an explicit `any` is
-  **not** a lint error here.
-- `tsconfig.json` sets `"strict": true` but then **overrides two of its members**:
-  `"noImplicitAny": false` and `"strictNullChecks": false`. `strict: true` is not the final word;
-  the later, narrower keys win.
-- `eslint.config.js` `files` is scoped to `src/**/*.ts`, so **`test/**` is not linted**.
+  **not** a lint error here. Still current.
+- `tsconfig.json` sets `"strict": true`, and **no longer overrides it**: `noImplicitAny` and
+  `strictNullChecks` are both `true`. They were previously `false`, which meant `strict: true` was
+  not the final word — the later, narrower keys won. Any claim about this repository written before
+  that change may assume the old behaviour.
+- `eslint.config.js` `files` now covers **both** `src/**/*.ts` and `test/**/*.ts`, with
+  `parserOptions.project` listing both tsconfigs so type-aware rules resolve. `test/` was
+  previously unlinted.
 
 Any claim that "strict mode would have caught it" must be checked against these three lines first.
 
@@ -166,9 +170,12 @@ becomes someone's rediscovery:
 - **The 8 bare `any` are left in place.** Rationale in §2.1: precise typing needs a server SDK type
   this package must not depend on, and narrowing a published type breaks consumers. The resolution
   is a runtime schema layer, not a type edit.
-- **`noImplicitAny` / `strictNullChecks` are left `false`.** Flipping either is not a
-  documentation change — it is a compile-breaking change across every model, and it belongs in its
-  own reviewed unit of work with the resulting diff visible.
+- **`noImplicitAny` / `strictNullChecks` are now both `true`.** Enabling them produced **0** errors
+  in `src/` and 5 in `test/`, all of the same shape (a test reading a deliberately-undeclared key
+  to assert unknown-key preservation), resolved with an explicit `unknown`-first cast rather than
+  by weakening a type. Note that enabling `noImplicitAny` *alone* produces two additional errors
+  that both flags together do not: `null` literals infer as `any` without `strictNullChecks`, so
+  the half-configuration is strictly worse than either end. Enable them together or not at all.
 - **`@typescript-eslint/no-explicit-any` is left `off`.** Turning it on would fail the build on the
   8 known fields above before there is anywhere for them to go.
 - **Transitive advisories with no upstream fix are not suppressed.** An `overrides` entry that

@@ -1027,7 +1027,7 @@ describe('Account.Schema', () => {
 
     it('should preserve an undeclared link platform rather than dropping it', () => {
       const parsed = Account.parse({ ...validAccount(), links: { website: 'https://example.invalid', mastodon: 'https://example.invalid/m' } });
-      expect(parsed.links?.['mastodon']).toBe('https://example.invalid/m');
+      expect((parsed.links as unknown as Record<string, unknown> | undefined)?.['mastodon']).toBe('https://example.invalid/m');
     });
   });
 
