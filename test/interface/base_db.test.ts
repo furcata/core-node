@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { BaseFirestore } from '../../src/interface/base_db.js';
+import { BaseFirestoreSchema, baseFirestoreShape } from '../../src/interface/base_db.js';
 
 describe('BaseFirestore', () => {
   describe('optional id field', () => {
@@ -99,6 +100,61 @@ describe('BaseFirestore', () => {
       const doc: BaseFirestore = {};
       expect(doc).toBeDefined();
       expect(typeof doc).toBe('object');
+    });
+  });
+});
+
+describe('BaseFirestoreSchema', () => {
+  describe('field inventory', () => {
+    it('should declare exactly the administrative fields', () => {
+      expect(Object.keys(baseFirestoreShape).sort()).toEqual(['backup', 'created', 'expiry', 'id', 'updated']);
+      expect(Object.keys(BaseFirestoreSchema.shape).sort()).toEqual(['backup', 'created', 'expiry', 'id', 'updated']);
+    });
+  });
+
+  describe('parsing', () => {
+    it('should accept a fully populated set of administrative fields', () => {
+      const result = BaseFirestoreSchema.safeParse({
+        id: 'doc_synthetic',
+        backup: true,
+        created: '2026-01-01T00:00:00.000Z',
+        updated: { seconds: 1767225600, nanoseconds: 0 },
+        expiry: new Date(1767225600000),
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept an empty document, because every field is optional', () => {
+      expect(BaseFirestoreSchema.safeParse({}).success).toBe(true);
+    });
+
+    it('should reject a non-string id and an empty one', () => {
+      expect(BaseFirestoreSchema.safeParse({ id: 1 }).success).toBe(false);
+      expect(BaseFirestoreSchema.safeParse({ id: '' }).success).toBe(false);
+    });
+
+    it('should reject a truthy string where the backup flag is declared boolean', () => {
+      expect(BaseFirestoreSchema.safeParse({ backup: 'true' }).success).toBe(false);
+    });
+
+    it('should reject a timestamp that is not any read shape of one', () => {
+      for (const created of [null, '', true, { when: 'soon' }]) {
+        expect(BaseFirestoreSchema.safeParse({ created }).success).toBe(false);
+      }
+    });
+  });
+
+  describe('unknown-key policy', () => {
+    it('should preserve an undeclared field, matching the index signature on the interface', () => {
+      const result = BaseFirestoreSchema.safeParse({ id: 'doc_synthetic', anything: 'kept' });
+      expect(result.success).toBe(true);
+      expect(result.data?.['anything']).toBe('kept');
+    });
+
+    it('should preserve a nested undeclared value by reference', () => {
+      const nested = { deep: true };
+      const result = BaseFirestoreSchema.safeParse({ nested });
+      expect(result.data?.['nested']).toBe(nested);
     });
   });
 });

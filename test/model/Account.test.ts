@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { Account } from '../../src/model/Account.js';
+import { ParseError } from '../../src/interface/schema.js';
 
 describe('Account.Status', () => {
   describe('enum values', () => {
@@ -850,6 +851,197 @@ describe('Account.Interface', () => {
       const account: Account.Interface = { id: 'acct-001', backup: true };
       expect(account.id).toBe('acct-001');
       expect(account.backup).toBe(true);
+    });
+  });
+});
+
+/**
+ * An account document that must parse.
+ */
+const validAccount = (): Record<string, unknown> => ({
+  name: 'Synthetic Org',
+  businessName: 'Synthetic Org LLC',
+  status: Account.Status.active,
+  type: Account.Type.business,
+  uid: 'uid_synthetic',
+  links: { website: 'https://example.invalid', x: 'https://example.invalid/x' },
+  companyType: Account.CompanyType.private,
+  stockExchange: Account.StockExchange.none,
+  businessType: Account.BusinessType.corporation,
+  businessRegionsOfOperations: Account.BusinessRegionsOfOperations.usaAndCanada,
+  businessRegistrationIdentifier: Account.BusinessRegistrationIdentifier.ein,
+  businessIndustry: Account.BusinessIndustry.technology,
+  authorizedRepresentative1: {
+    firstName: 'Synthetic',
+    jobPosition: Account.AuthorizedRepresentativeJobPosition.ceo,
+  },
+  estimatedVolume: 10000,
+  brandType: Account.BrandType.standard,
+  appToPersonUseCase: Account.AppToPersonUseCase.mixed,
+  automaticHeader: true,
+  utcOffset: -300,
+  domainOk: false,
+  pending: 5,
+  ready: 3,
+  sender: 1,
+  sending: 2,
+});
+
+describe('Account.Schema', () => {
+  describe('field inventory', () => {
+    it('should declare the account fields alongside the inherited audit and queue fields', () => {
+      const keys = Object.keys(Account.Schema.shape);
+      for (const field of ['id', 'backup', 'created', 'updated', 'expiry']) {
+        expect(keys).toContain(field);
+      }
+      for (const field of ['pending', 'ready', 'sender', 'sending', 'counted']) {
+        expect(keys).toContain(field);
+      }
+      for (const field of ['status', 'type', 'brandType', 'businessIndustry', 'appToPersonUseCase', 'bca', 'domainTimestamp']) {
+        expect(keys).toContain(field);
+      }
+    });
+
+    it('should declare every sample-message slot', () => {
+      const keys = Object.keys(Account.Schema.shape);
+      for (let slot = 1; slot <= 5; slot += 1) {
+        expect(keys).toContain(`sampleMessage${slot}`);
+      }
+    });
+  });
+
+  describe('a valid document', () => {
+    it('should parse and return the typed account', () => {
+      const parsed = Account.parse(validAccount());
+      expect(parsed.status).toBe(Account.Status.active);
+      expect(parsed.links?.website).toBe('https://example.invalid');
+      expect(parsed.pending).toBe(5);
+    });
+
+    it('should accept an empty object, because every field is optional', () => {
+      expect(Account.safeParse({}).success).toBe(true);
+    });
+  });
+
+  describe('enum rejection', () => {
+    const enumFields: readonly (readonly [string, Record<string, string>])[] = [
+      ['status', Account.Status],
+      ['type', Account.Type],
+      ['companyType', Account.CompanyType],
+      ['stockExchange', Account.StockExchange],
+      ['businessType', Account.BusinessType],
+      ['businessRegionsOfOperations', Account.BusinessRegionsOfOperations],
+      ['businessRegistrationIdentifier', Account.BusinessRegistrationIdentifier],
+      ['businessIndustry', Account.BusinessIndustry],
+      ['brandType', Account.BrandType],
+      ['appToPersonUseCase', Account.AppToPersonUseCase],
+    ];
+
+    it.each(enumFields)('should accept every declared member of %s', (field, members) => {
+      for (const member of Object.values(members)) {
+        expect(Account.safeParse({ ...validAccount(), [field]: member }).success).toBe(true);
+      }
+    });
+
+    it.each(enumFields)('should reject an undeclared value for %s', (field) => {
+      for (const candidate of ['not_a_member', '', 'UNKNOWN']) {
+        const result = Account.safeParse({ ...validAccount(), [field]: candidate });
+        expect(result.success).toBe(false);
+        expect(result.issues?.some((issue) => issue.path === field)).toBe(true);
+      }
+    });
+
+    it('should reject a status that would otherwise fail open and keep the queue running', () => {
+      expect(Account.safeParse({ ...validAccount(), status: 'Paused' }).success).toBe(false);
+      expect(Account.safeParse({ ...validAccount(), status: 'PAUSED' }).success).toBe(false);
+      expect(Account.safeParse({ ...validAccount(), status: 'stopped' }).success).toBe(false);
+    });
+
+    it('should reject an undeclared job position on an authorised representative', () => {
+      const result = Account.safeParse({
+        ...validAccount(),
+        authorizedRepresentative1: { firstName: 'Synthetic', jobPosition: 'Founder' },
+      });
+      expect(result.success).toBe(false);
+      expect(result.issues?.some((issue) => issue.path === 'authorizedRepresentative1.jobPosition')).toBe(true);
+    });
+  });
+
+  describe('numeric fields', () => {
+    it('should reject a non-numeric estimated volume rather than coercing it', () => {
+      const result = Account.safeParse({ ...validAccount(), estimatedVolume: 'abc' });
+      expect(result.success).toBe(false);
+      expect(result.issues?.some((issue) => issue.path === 'estimatedVolume')).toBe(true);
+    });
+
+    it('should reject a numeric string estimated volume, which would select a brand tier by comparing NaN', () => {
+      expect(Account.safeParse({ ...validAccount(), estimatedVolume: '10000' }).success).toBe(false);
+    });
+
+    it('should reject a negative or fractional estimated volume', () => {
+      expect(Account.safeParse({ ...validAccount(), estimatedVolume: -1 }).success).toBe(false);
+      expect(Account.safeParse({ ...validAccount(), estimatedVolume: 1.5 }).success).toBe(false);
+    });
+
+    it('should reject an out-of-range or fractional UTC offset', () => {
+      expect(Account.safeParse({ ...validAccount(), utcOffset: 1441 }).success).toBe(false);
+      expect(Account.safeParse({ ...validAccount(), utcOffset: -1441 }).success).toBe(false);
+      expect(Account.safeParse({ ...validAccount(), utcOffset: 5.5 }).success).toBe(false);
+    });
+  });
+
+  describe('the inherited queue counters', () => {
+    it('should reject a non-numeric counter rather than coercing it', () => {
+      for (const field of ['pending', 'ready', 'sender', 'sending']) {
+        expect(Account.safeParse({ ...validAccount(), [field]: 'abc' }).success).toBe(false);
+      }
+    });
+
+    it('should reject a negative or fractional counter', () => {
+      expect(Account.safeParse({ ...validAccount(), pending: -1 }).success).toBe(false);
+      expect(Account.safeParse({ ...validAccount(), ready: 1.5 }).success).toBe(false);
+    });
+
+    it('should accept an arbitrary counted snapshot, which is open by declaration', () => {
+      expect(Account.safeParse({ ...validAccount(), counted: { at: 'anything' } }).success).toBe(true);
+    });
+  });
+
+  describe('the domain timestamp', () => {
+    it('should accept every read shape of a timestamp', () => {
+      for (const domainTimestamp of ['2026-01-01T00:00:00.000Z', { seconds: 1767225600, nanoseconds: 0 }, new Date(1767225600000), 1767225600000]) {
+        expect(Account.safeParse({ ...validAccount(), domainTimestamp }).success).toBe(true);
+      }
+    });
+
+    it('should reject a value that is not any read shape of a timestamp', () => {
+      expect(Account.safeParse({ ...validAccount(), domainTimestamp: null }).success).toBe(false);
+      expect(Account.safeParse({ ...validAccount(), domainTimestamp: true }).success).toBe(false);
+    });
+  });
+
+  describe('the links block', () => {
+    it('should reject a non-string link', () => {
+      expect(Account.safeParse({ ...validAccount(), links: { website: 1 } }).success).toBe(false);
+    });
+
+    it('should preserve an undeclared link platform rather than dropping it', () => {
+      const parsed = Account.parse({ ...validAccount(), links: { website: 'https://example.invalid', mastodon: 'https://example.invalid/m' } });
+      expect(parsed.links?.['mastodon']).toBe('https://example.invalid/m');
+    });
+  });
+
+  describe('unknown-key policy', () => {
+    it('should preserve an undeclared field rather than dropping it', () => {
+      const parsed = Account.parse({ ...validAccount(), legacyField: 'kept' });
+      expect(parsed['legacyField']).toBe('kept');
+    });
+  });
+
+  describe('throwing form', () => {
+    it('should throw a ParseError naming the shape', () => {
+      expect(() => Account.parse({ status: 'not_a_member' })).toThrow(ParseError);
+      expect(() => Account.parse({ status: 'not_a_member' })).toThrow(/Account\.Interface failed validation/);
     });
   });
 });

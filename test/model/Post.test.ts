@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { Post } from '../../src/model/Post.js';
+import { ParseError } from '../../src/interface/schema.js';
 
 describe('Post.Status', () => {
   describe('enum values', () => {
@@ -297,6 +298,148 @@ describe('Post.Interface', () => {
       expect(post.title).toBe('Never Gonna Give You Up');
       expect(post.status).toBe('active');
       expect(post.views).toBeGreaterThan(1000000000);
+    });
+  });
+});
+
+/**
+ * A post document that must parse.
+ */
+const validPost = (): Record<string, unknown> => ({
+  account: 'account_synthetic',
+  source: 'source_synthetic',
+  status: Post.Status.active,
+  type: Post.Type.link,
+  uid: 'uid_synthetic',
+  tags: ['synthetic'],
+  featured: false,
+  views: 10,
+  likes: 2,
+});
+
+describe('Post.Schema', () => {
+  describe('field inventory', () => {
+    it('should declare every field of the interface plus the inherited audit fields', () => {
+      expect(Object.keys(Post.Schema.shape).sort()).toEqual([
+        'account',
+        'backup',
+        'category',
+        'created',
+        'description',
+        'expiry',
+        'featured',
+        'fetched',
+        'hashtags',
+        'id',
+        'image',
+        'images',
+        'language',
+        'likes',
+        'media',
+        'ml',
+        'mlDescription',
+        'mlHashtags',
+        'mlImage',
+        'mlTitle',
+        'safe',
+        'service',
+        'source',
+        'status',
+        'tags',
+        'title',
+        'type',
+        'uid',
+        'updated',
+        'url',
+        'user',
+        'views',
+      ]);
+    });
+  });
+
+  describe('a valid document', () => {
+    it('should parse and return the typed post', () => {
+      const parsed = Post.parse(validPost());
+      expect(parsed.source).toBe('source_synthetic');
+      expect(parsed.type).toBe(Post.Type.link);
+      expect(parsed.status).toBe(Post.Status.active);
+    });
+
+    it('should parse a minimal document carrying only the required fields', () => {
+      const parsed = Post.parse({ source: 'source_synthetic', type: Post.Type.youtube });
+      expect(parsed.status).toBeUndefined();
+    });
+  });
+
+  describe('enum rejection', () => {
+    it('should accept every declared status and type', () => {
+      for (const status of Object.values(Post.Status)) {
+        expect(Post.safeParse({ ...validPost(), status }).success).toBe(true);
+      }
+      for (const type of Object.values(Post.Type)) {
+        expect(Post.safeParse({ ...validPost(), type }).success).toBe(true);
+      }
+    });
+
+    it('should reject a status that is not a declared member, which would fail open and display withdrawn content', () => {
+      for (const status of ['deleted', 'Active', 'ACTIVE', 'hidden', '']) {
+        const result = Post.safeParse({ ...validPost(), status });
+        expect(result.success).toBe(false);
+        expect(result.issues?.some((issue) => issue.path === 'status')).toBe(true);
+      }
+    });
+
+    it('should reject a type that is not a declared member, which would dispatch to no fetcher', () => {
+      for (const type of ['twitter', 'Instagram', 'INSTAGRAM', 'threads', '']) {
+        expect(Post.safeParse({ ...validPost(), type }).success).toBe(false);
+      }
+    });
+  });
+
+  describe('missing required fields', () => {
+    it.each(['source', 'type'])('should reject a document with no %s', (field) => {
+      const post = validPost();
+      delete post[field];
+      const result = Post.safeParse(post);
+      expect(result.success).toBe(false);
+      expect(result.issues?.some((issue) => issue.path === field)).toBe(true);
+    });
+
+    it('should reject an empty source, which cannot be fetched or de-duplicated', () => {
+      expect(Post.safeParse({ ...validPost(), source: '' }).success).toBe(false);
+    });
+  });
+
+  describe('numeric fields', () => {
+    it('should reject a non-numeric counter rather than coercing it', () => {
+      expect(Post.safeParse({ ...validPost(), views: 'abc' }).success).toBe(false);
+      expect(Post.safeParse({ ...validPost(), likes: '2' }).success).toBe(false);
+    });
+
+    it('should reject a negative or fractional counter', () => {
+      expect(Post.safeParse({ ...validPost(), views: -1 }).success).toBe(false);
+      expect(Post.safeParse({ ...validPost(), likes: 1.5 }).success).toBe(false);
+    });
+  });
+
+  describe('boolean fields', () => {
+    it('should reject a truthy string where a boolean is declared', () => {
+      expect(Post.safeParse({ ...validPost(), featured: 'true' }).success).toBe(false);
+      expect(Post.safeParse({ ...validPost(), safe: 1 }).success).toBe(false);
+    });
+  });
+
+  describe('unknown-key policy', () => {
+    it('should preserve an undeclared field rather than dropping it', () => {
+      const parsed = Post.parse({ ...validPost(), legacyField: 'kept' });
+      expect(parsed['legacyField']).toBe('kept');
+    });
+  });
+
+  describe('throwing form', () => {
+    it('should throw a ParseError naming the shape', () => {
+      expect(() => Post.parse({ source: 's' })).toThrow(ParseError);
+      expect(() => Post.parse({ source: 's' })).toThrow(/Post\.Interface failed validation/);
     });
   });
 });

@@ -2,6 +2,8 @@
  * @license
  * Copyright Furcata. All Rights Reserved.
  */
+import { z } from 'zod';
+import { AssertSchemaOutput, ParseResult } from './schema.js';
 /**
  * Discriminated enum that categorises a geographic place by its administrative
  * level, used when storing or querying place-related documents.
@@ -56,6 +58,81 @@ export interface BasePlaceData {
      */
     area?: string;
 }
+/**
+ * Field schemas for {@link BasePlaceData}, exported as a raw shape so documents
+ * that mix place data in — {@link EventData} in particular — can spread it
+ * instead of restating it and letting the copies drift.
+ */
+export declare const basePlaceDataShape: {
+    /**
+     * See {@link BasePlaceData.location}. Element count is deliberately
+     * unconstrained: the published type is `number[]`, and rejecting a stored
+     * array of another length would narrow it.
+     */
+    location: z.ZodOptional<z.ZodArray<z.ZodNumber>>;
+    /**
+     * See {@link BasePlaceData.placeId}.
+     */
+    placeId: z.ZodOptional<z.ZodString>;
+    /**
+     * See {@link BasePlaceData.latitude}.
+     */
+    latitude: z.ZodOptional<z.ZodNumber>;
+    /**
+     * See {@link BasePlaceData.longitude}.
+     */
+    longitude: z.ZodOptional<z.ZodNumber>;
+    /**
+     * See {@link BasePlaceData.placeName}.
+     */
+    placeName: z.ZodOptional<z.ZodString>;
+    /**
+     * See {@link BasePlaceData.utcOffset}.
+     */
+    utcOffset: z.ZodOptional<z.ZodNumber>;
+    /**
+     * See {@link BasePlaceData.country}. Accepted as any non-empty string rather
+     * than a two-letter code: the field is documented as ISO 3166-1 alpha-2, but
+     * narrowing a published field to a fixed length would reject any stored
+     * document that predates that convention.
+     */
+    country: z.ZodOptional<z.ZodString>;
+    /**
+     * See {@link BasePlaceData.geohash}.
+     */
+    geohash: z.ZodOptional<z.ZodString>;
+    /**
+     * See {@link BasePlaceData.area}.
+     */
+    area: z.ZodOptional<z.ZodString>;
+};
+/**
+ * Runtime schema producing {@link BasePlaceData}.
+ *
+ * Unknown keys are preserved rather than dropped, because this shape is mixed
+ * into larger documents and a stripping schema would delete their other fields
+ * on a read-modify-write.
+ *
+ * No standalone parse helper is exported: this is a mixin, and every field on it
+ * is optional, so parsing an arbitrary value against it succeeds almost
+ * unconditionally. Compose it into a concrete document schema instead.
+ */
+export declare const BasePlaceDataSchema: z.ZodObject<{
+    location: z.ZodOptional<z.ZodArray<z.ZodNumber>>;
+    placeId: z.ZodOptional<z.ZodString>;
+    latitude: z.ZodOptional<z.ZodNumber>;
+    longitude: z.ZodOptional<z.ZodNumber>;
+    placeName: z.ZodOptional<z.ZodString>;
+    utcOffset: z.ZodOptional<z.ZodNumber>;
+    country: z.ZodOptional<z.ZodString>;
+    geohash: z.ZodOptional<z.ZodString>;
+    area: z.ZodOptional<z.ZodString>;
+}, z.core.$loose>;
+/**
+ * Compile-time proof that {@link BasePlaceDataSchema} produces
+ * {@link BasePlaceData}.
+ */
+export type BasePlaceDataSchemaOutput = AssertSchemaOutput<z.infer<typeof BasePlaceDataSchema>, BasePlaceData>;
 /**
  * Full place record as stored in the Firestore places collection.
  *
@@ -184,3 +261,186 @@ export interface PlaceData {
         };
     };
 }
+/**
+ * Field schemas for {@link PlaceData}, exported as a raw shape for composition
+ * and for inventory assertions in tests.
+ */
+export declare const placeDataShape: {
+    /**
+     * See {@link PlaceData.created}.
+     */
+    created: z.ZodOptional<z.ZodString>;
+    /**
+     * See {@link PlaceData.id}.
+     */
+    id: z.ZodOptional<z.ZodString>;
+    /**
+     * See {@link PlaceData.area}.
+     */
+    area: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    /**
+     * See {@link PlaceData.areaLong}.
+     */
+    areaLong: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    /**
+     * See {@link PlaceData.areas}.
+     */
+    areas: z.ZodOptional<z.ZodArray<z.ZodNumber>>;
+    /**
+     * See {@link PlaceData.city}.
+     */
+    city: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    /**
+     * See {@link PlaceData.cityLong}.
+     */
+    cityLong: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    /**
+     * See {@link PlaceData.country}.
+     */
+    country: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    /**
+     * See {@link PlaceData.countryLong}.
+     */
+    countryLong: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    /**
+     * See {@link PlaceData.latitude}.
+     */
+    latitude: z.ZodOptional<z.ZodNumber>;
+    /**
+     * See {@link PlaceData.longitude}.
+     */
+    longitude: z.ZodOptional<z.ZodNumber>;
+    /**
+     * See {@link PlaceData.local}.
+     */
+    local: z.ZodOptional<z.ZodBoolean>;
+    /**
+     * See {@link PlaceData.longName}.
+     */
+    longName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    /**
+     * See {@link PlaceData.name}.
+     */
+    name: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    /**
+     * See {@link PlaceData.postalCode}. Numeric rather than string by declaration;
+     * a postal code supplied as text is rejected here rather than coerced, because
+     * `Number('SW1A')` is `NaN` and a `NaN` postal code matches nothing while
+     * looking like a value.
+     */
+    postalCode: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    /**
+     * See {@link PlaceData.state}.
+     */
+    state: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    /**
+     * See {@link PlaceData.stateLong}.
+     */
+    stateLong: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    /**
+     * See {@link PlaceData.timeOffset}.
+     */
+    timeOffset: z.ZodOptional<z.ZodNumber>;
+    /**
+     * See {@link PlaceData.timeZoneId}.
+     */
+    timeZoneId: z.ZodOptional<z.ZodString>;
+    /**
+     * See {@link PlaceData.timeZoneName}.
+     */
+    timeZoneName: z.ZodOptional<z.ZodString>;
+    /**
+     * See {@link PlaceData.type}. Constrained to {@link PlaceType}, so an
+     * unrecognised administrative level is rejected instead of being asserted into
+     * the enum by a cast.
+     */
+    type: z.ZodOptional<z.ZodEnum<typeof PlaceType>>;
+    /**
+     * See {@link PlaceData.updated}.
+     */
+    updated: z.ZodOptional<z.ZodString>;
+    /**
+     * See {@link PlaceData.url}.
+     */
+    url: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    /**
+     * See {@link PlaceData.vicinity}.
+     */
+    vicinity: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    /**
+     * See {@link PlaceData.viewport}.
+     */
+    viewport: z.ZodOptional<z.ZodObject<{
+        northeast: z.ZodObject<{
+            latitude: z.ZodNumber;
+            longitude: z.ZodNumber;
+        }, z.core.$loose>;
+        southwest: z.ZodObject<{
+            latitude: z.ZodNumber;
+            longitude: z.ZodNumber;
+        }, z.core.$loose>;
+    }, z.core.$loose>>;
+};
+/**
+ * Runtime schema producing {@link PlaceData}.
+ *
+ * Unknown keys are preserved rather than dropped or rejected, so a place
+ * document written by a newer resolver still parses here and survives a
+ * round-trip without losing the fields this version does not know about.
+ */
+export declare const PlaceDataSchema: z.ZodObject<{
+    created: z.ZodOptional<z.ZodString>;
+    id: z.ZodOptional<z.ZodString>;
+    area: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    areaLong: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    areas: z.ZodOptional<z.ZodArray<z.ZodNumber>>;
+    city: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    cityLong: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    country: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    countryLong: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    latitude: z.ZodOptional<z.ZodNumber>;
+    longitude: z.ZodOptional<z.ZodNumber>;
+    local: z.ZodOptional<z.ZodBoolean>;
+    longName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    name: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    postalCode: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    state: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    stateLong: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    timeOffset: z.ZodOptional<z.ZodNumber>;
+    timeZoneId: z.ZodOptional<z.ZodString>;
+    timeZoneName: z.ZodOptional<z.ZodString>;
+    type: z.ZodOptional<z.ZodEnum<typeof PlaceType>>;
+    updated: z.ZodOptional<z.ZodString>;
+    url: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    vicinity: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    viewport: z.ZodOptional<z.ZodObject<{
+        northeast: z.ZodObject<{
+            latitude: z.ZodNumber;
+            longitude: z.ZodNumber;
+        }, z.core.$loose>;
+        southwest: z.ZodObject<{
+            latitude: z.ZodNumber;
+            longitude: z.ZodNumber;
+        }, z.core.$loose>;
+    }, z.core.$loose>>;
+}, z.core.$loose>;
+/**
+ * Compile-time proof that {@link PlaceDataSchema} produces {@link PlaceData}.
+ */
+export type PlaceDataSchemaOutput = AssertSchemaOutput<z.infer<typeof PlaceDataSchema>, PlaceData>;
+/**
+ * Validates untrusted data as a {@link PlaceData} document without throwing.
+ *
+ * @param {unknown} value - Untrusted value, typically the raw data of a stored place document.
+ * @return {ParseResult<PlaceData>} Success carrying the typed place, or failure carrying the reasons.
+ */
+export declare const safeParsePlaceData: (value: unknown) => ParseResult<PlaceData>;
+/**
+ * Validates untrusted data as a {@link PlaceData} document, throwing when it
+ * does not conform.
+ *
+ * @param {unknown} value - Untrusted value, typically the raw data of a stored place document.
+ * @return {PlaceData} The validated place document.
+ * @throws {ParseError} When the value does not conform to {@link PlaceDataSchema}.
+ */
+export declare const parsePlaceData: (value: unknown) => PlaceData;

@@ -2,7 +2,16 @@
  * @license
  * Copyright Furcata. All Rights Reserved.
  */
-import {BaseFirestore} from '../interface/base_db.js';
+import {z} from 'zod';
+import {BaseFirestore, baseFirestoreShape} from '../interface/base_db.js';
+import {
+  AssertSchemaOutput,
+  documentId,
+  nonEmptyString,
+  ParseResult,
+  parseOrThrow,
+  parseResult,
+} from '../interface/schema.js';
 
 /**
  * Namespace for messaging event models that represent individual communication
@@ -169,4 +178,148 @@ export namespace MessagingEvent {
       id: string;
     };
   }
+
+  /**
+   * Schema for the denormalised sender snapshot on {@link Interface.user}.
+   *
+   * `id` is required because the snapshot exists precisely so that a display
+   * surface does not have to perform a second lookup — a snapshot without the
+   * identity it stands in for cannot be reconciled against anything.
+   */
+  const userSnapshotSchema = z.looseObject({
+    /**
+     * See {@link Interface.user}.
+     */
+    avatar: nonEmptyString().optional(),
+    /**
+     * Sender's first name.
+     */
+    firstName: z.string().optional(),
+    /**
+     * Sender's last name.
+     */
+    lastName: z.string().optional(),
+    /**
+     * Sender's full display name.
+     */
+    name: z.string().optional(),
+    /**
+     * Abbreviated form of the sender's name.
+     */
+    abbr: z.string().optional(),
+    /**
+     * Sender's unique username handle.
+     */
+    username: z.string().optional(),
+    /**
+     * Firebase Auth UID of the sender.
+     */
+    id: nonEmptyString(),
+  });
+
+  /**
+   * Runtime schema producing {@link Interface}.
+   *
+   * ### On {@link Interface.type}
+   *
+   * The published field is `Type | string`, so this schema accepts either. That
+   * is deliberate and it is **not** enum validation: narrowing the field to
+   * {@link Type} alone would reject every event stored before the enum existed,
+   * which is a breaking change for consumers rather than a fix. The union is
+   * written out rather than collapsed to `z.string()` so the intended grammar
+   * stays visible at the point a future major version can close it. A caller
+   * that requires strict membership should test the parsed value against
+   * `Object.values(MessagingEvent.Type)` explicitly.
+   *
+   * Unknown keys are preserved, matching the index signature inherited from
+   * {@link BaseFirestore}. That also means a stored `status` value — which
+   * {@link Status} describes but {@link Interface} does not yet declare —
+   * survives a parse and a round-trip untouched.
+   */
+  export const Schema = z.looseObject({
+    ...baseFirestoreShape,
+    /**
+     * See {@link Interface.account}.
+     */
+    account: documentId().optional(),
+    /**
+     * See {@link Interface.service}.
+     */
+    service: nonEmptyString().optional(),
+    /**
+     * See {@link Interface.language}.
+     */
+    language: nonEmptyString().optional(),
+    /**
+     * See {@link Interface.media}.
+     */
+    media: z.array(z.string()).optional(),
+    /**
+     * See {@link Interface.body}. Permitted to be empty: a delivery receipt for
+     * a media-only message legitimately carries no text.
+     */
+    body: z.string().optional(),
+    /**
+     * See {@link Interface.type}, and the note on this schema about why a raw
+     * string is still accepted.
+     */
+    type: z.union([z.enum(Type), z.string()]).optional(),
+    /**
+     * See {@link Interface.uid}. `null` denotes a system-generated event and
+     * must survive a JSON round-trip.
+     */
+    uid: z.string().nullable().optional(),
+    /**
+     * See {@link Interface.ml}.
+     */
+    ml: z.boolean().optional(),
+    /**
+     * See {@link Interface.unsafe}.
+     */
+    unsafe: z.boolean().optional(),
+    /**
+     * See {@link Interface.labels}.
+     */
+    labels: z.array(z.string()).optional(),
+    /**
+     * See {@link Interface.error}. `null` denotes "no error occurred", which is
+     * a different claim from the field being absent.
+     */
+    error: z.string().nullable().optional(),
+    /**
+     * See {@link Interface.errorCodeProvider}. Accepted as either a number or a
+     * string because providers differ, but **never coerced between them**: a
+     * code turned into `NaN` by a reflexive `Number()` would compare equal to no
+     * known code and silently classify a hard failure as unrecognised.
+     */
+    errorCodeProvider: z.union([z.number(), z.string()]).optional(),
+    /**
+     * See {@link Interface.user}.
+     */
+    user: userSnapshotSchema.optional(),
+  });
+
+  /**
+   * Compile-time proof that {@link Schema} produces {@link Interface}.
+   */
+  export type SchemaOutput = AssertSchemaOutput<z.infer<typeof Schema>, Interface>;
+
+  /**
+   * Validates untrusted data as a messaging event without throwing.
+   *
+   * @param {unknown} value - Untrusted value, typically the raw data of a stored messaging event document.
+   * @return {ParseResult<Interface>} Success carrying the typed event, or failure carrying the reasons.
+   */
+  export const safeParse = (value: unknown): ParseResult<Interface> =>
+    parseResult(Schema, value, 'MessagingEvent.Interface');
+
+  /**
+   * Validates untrusted data as a messaging event, throwing when it does not
+   * conform.
+   *
+   * @param {unknown} value - Untrusted value, typically the raw data of a stored messaging event document.
+   * @return {Interface} The validated messaging event.
+   * @throws {ParseError} When the value does not conform to {@link Schema}.
+   */
+  export const parse = (value: unknown): Interface => parseOrThrow(Schema, value, 'MessagingEvent.Interface');
 }

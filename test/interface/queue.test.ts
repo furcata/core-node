@@ -5,6 +5,8 @@
 
 import { describe, it, expect } from 'vitest';
 import type { MessageQueue } from '../../src/interface/queue.js';
+import { MessageQueueSchema, parseMessageQueue, safeParseMessageQueue } from '../../src/interface/queue.js';
+import { ParseError } from '../../src/interface/schema.js';
 
 describe('MessageQueue', () => {
   describe('optional pending field', () => {
@@ -112,6 +114,65 @@ describe('MessageQueue', () => {
       const queue: MessageQueue = { pending: 0, ready: 0, sender: 1, sending: 10 };
       expect(queue.sending).toBeGreaterThan(0);
       expect(queue.pending).toBe(0);
+    });
+  });
+});
+
+describe('MessageQueueSchema', () => {
+  describe('field inventory', () => {
+    it('should declare exactly the queue counters and the diagnostic snapshot', () => {
+      expect(Object.keys(MessageQueueSchema.shape).sort()).toEqual(['counted', 'pending', 'ready', 'sender', 'sending']);
+    });
+  });
+
+  describe('parsing', () => {
+    it('should accept a fully populated queue state', () => {
+      const parsed = parseMessageQueue({ pending: 100, ready: 80, sender: 5, sending: 15, counted: { at: 'anything' } });
+      expect(parsed.pending).toBe(100);
+      expect(parsed.sending).toBe(15);
+    });
+
+    it('should accept an empty object, because every counter is optional', () => {
+      expect(safeParseMessageQueue({}).success).toBe(true);
+    });
+
+    it('should accept zero on every counter', () => {
+      expect(safeParseMessageQueue({ pending: 0, ready: 0, sender: 0, sending: 0 }).success).toBe(true);
+    });
+  });
+
+  describe('counter rejection', () => {
+    it.each(['pending', 'ready', 'sender', 'sending'])('should reject a non-numeric %s rather than coercing it', (field) => {
+      const result = safeParseMessageQueue({ [field]: 'abc' });
+      expect(result.success).toBe(false);
+      expect(result.issues?.some((issue) => issue.path === field)).toBe(true);
+    });
+
+    it.each(['pending', 'ready', 'sender', 'sending'])('should reject a numeric string %s', (field) => {
+      expect(safeParseMessageQueue({ [field]: '5' }).success).toBe(false);
+    });
+
+    it.each(['pending', 'ready', 'sender', 'sending'])('should reject a negative or fractional %s', (field) => {
+      expect(safeParseMessageQueue({ [field]: -1 }).success).toBe(false);
+      expect(safeParseMessageQueue({ [field]: 1.5 }).success).toBe(false);
+    });
+
+    it('should reject NaN on a counter', () => {
+      expect(safeParseMessageQueue({ pending: Number.NaN }).success).toBe(false);
+    });
+  });
+
+  describe('unknown-key policy', () => {
+    it('should preserve an undeclared field rather than dropping it', () => {
+      const parsed = parseMessageQueue({ pending: 1, legacyCounter: 9 });
+      expect(parsed['legacyCounter']).toBe(9);
+    });
+  });
+
+  describe('throwing form', () => {
+    it('should throw a ParseError naming the shape', () => {
+      expect(() => parseMessageQueue({ pending: 'abc' })).toThrow(ParseError);
+      expect(() => parseMessageQueue({ pending: 'abc' })).toThrow(/MessageQueue failed validation/);
     });
   });
 });

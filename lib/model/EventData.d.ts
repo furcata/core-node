@@ -2,8 +2,10 @@
  * @license
  * Copyright Furcata. All Rights Reserved.
  */
+import { z } from 'zod';
 import { BaseFirestore } from '../interface/base_db.js';
 import { BasePlaceData } from '../interface/place.js';
+import { AssertSchemaOutput, ParseResult } from '../interface/schema.js';
 import { Block } from './Block.js';
 /**
  * Namespace for event-data models representing scheduled or on-demand events
@@ -163,4 +165,92 @@ export declare namespace EventData {
          */
         booked?: number;
     }
+    /**
+     * Runtime schema producing {@link Interface}.
+     *
+     * ### On the three enum-or-string fields
+     *
+     * {@link Interface.type}, {@link Interface.frequency} and
+     * {@link Interface.status} are published as `Enum | string`, so this schema
+     * accepts either. That is faithful to the declared contract and it is **not**
+     * enum validation: narrowing any of them to the enum alone would reject every
+     * event stored before that enum existed, which is a breaking change for
+     * consumers rather than a fix. Each union is written out rather than collapsed
+     * to `z.string()` so the intended grammar stays visible at the point a future
+     * major version can close it. A caller that needs strict membership should
+     * test the parsed value against `Object.values(EventData.Status)` explicitly.
+     *
+     * ### On the timestamps
+     *
+     * {@link Interface.startTime} and {@link Interface.endTime} are declared `any`
+     * for the same reason the audit fields on {@link BaseFirestore} are, and they
+     * are resolved the same way — validated at this boundary rather than in a type
+     * that cannot name a server sentinel. See `auditTimestamp` for the shapes
+     * accepted and how to widen the schema for a write payload.
+     */
+    const Schema: z.ZodObject<{
+        name: z.ZodOptional<z.ZodString>;
+        description: z.ZodOptional<z.ZodString>;
+        language: z.ZodOptional<z.ZodString>;
+        account: z.ZodOptional<z.ZodString>;
+        media: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        type: z.ZodOptional<z.ZodUnion<readonly [z.ZodEnum<typeof Type>, z.ZodString]>>;
+        frequency: z.ZodOptional<z.ZodUnion<readonly [z.ZodEnum<typeof Frequency>, z.ZodString]>>;
+        status: z.ZodOptional<z.ZodUnion<readonly [z.ZodEnum<typeof Status>, z.ZodString]>>;
+        uid: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        blocks: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            type: z.ZodEnum<typeof Block.Type>;
+            value: z.ZodCustom<string | number | Record<string, unknown> | unknown[], string | number | Record<string, unknown> | unknown[]>;
+            label: z.ZodString;
+            width: z.ZodOptional<z.ZodNumber>;
+            height: z.ZodOptional<z.ZodNumber>;
+        }, z.core.$loose>>>;
+        currency: z.ZodOptional<z.ZodString>;
+        amount: z.ZodOptional<z.ZodNumber>;
+        users: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        hosts: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        limit: z.ZodOptional<z.ZodNumber>;
+        startTime: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+        endTime: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+        duration: z.ZodOptional<z.ZodNumber>;
+        runHour: z.ZodOptional<z.ZodInt>;
+        clicks: z.ZodOptional<z.ZodNumber>;
+        views: z.ZodOptional<z.ZodNumber>;
+        checkout: z.ZodOptional<z.ZodNumber>;
+        booked: z.ZodOptional<z.ZodNumber>;
+        location: z.ZodOptional<z.ZodArray<z.ZodNumber>>;
+        placeId: z.ZodOptional<z.ZodString>;
+        latitude: z.ZodOptional<z.ZodNumber>;
+        longitude: z.ZodOptional<z.ZodNumber>;
+        placeName: z.ZodOptional<z.ZodString>;
+        utcOffset: z.ZodOptional<z.ZodNumber>;
+        country: z.ZodOptional<z.ZodString>;
+        geohash: z.ZodOptional<z.ZodString>;
+        area: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        backup: z.ZodOptional<z.ZodBoolean>;
+        created: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+        updated: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+        expiry: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+    }, z.core.$loose>;
+    /**
+     * Compile-time proof that {@link Schema} produces {@link Interface}.
+     */
+    type SchemaOutput = AssertSchemaOutput<z.infer<typeof Schema>, Interface>;
+    /**
+     * Validates untrusted data as an event document without throwing.
+     *
+     * @param {unknown} value - Untrusted value, typically the raw data of a stored event document.
+     * @return {ParseResult<Interface>} Success carrying the typed event, or failure carrying the reasons.
+     */
+    const safeParse: (value: unknown) => ParseResult<Interface>;
+    /**
+     * Validates untrusted data as an event document, throwing when it does not
+     * conform.
+     *
+     * @param {unknown} value - Untrusted value, typically the raw data of a stored event document.
+     * @return {Interface} The validated event document.
+     * @throws {ParseError} When the value does not conform to {@link Schema}.
+     */
+    const parse: (value: unknown) => Interface;
 }

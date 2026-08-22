@@ -3,8 +3,18 @@
  * Copyright Furcata. All Rights Reserved.
  */
 import {User} from '@fabricelements/shared-helpers/user';
-import {BaseFirestore} from '../interface/base_db.js';
-import {MessageQueue} from '../interface/queue.js';
+import {z} from 'zod';
+import {BaseFirestore, baseFirestoreShape} from '../interface/base_db.js';
+import {MessageQueue, messageQueueShape} from '../interface/queue.js';
+import {
+  AssertSchemaOutput,
+  auditTimestamp,
+  counter,
+  nonEmptyString,
+  ParseResult,
+  parseOrThrow,
+  parseResult,
+} from '../interface/schema.js';
 
 /**
  * Namespace for account models representing business or government entities
@@ -557,4 +567,331 @@ export namespace Account {
      */
     bca?: string; // Billing Connected Account
   }
+
+  /**
+   * Schema for {@link AuthorizedRepresentative}.
+   *
+   * Every field is optional because brand registration is filled in
+   * progressively and a partially completed representative is a legitimate
+   * stored state. {@link AuthorizedRepresentative.jobPosition} is validated
+   * against its enum rather than asserted into it, because an unrecognised
+   * seniority is rejected by the downstream registration API anyway — failing
+   * here costs a validation error, failing there costs a registration round
+   * trip.
+   */
+  const authorizedRepresentativeSchema = z.looseObject({
+    /**
+     * See {@link AuthorizedRepresentative.firstName}.
+     */
+    firstName: z.string().optional(),
+    /**
+     * See {@link AuthorizedRepresentative.lastName}.
+     */
+    lastName: z.string().optional(),
+    /**
+     * See {@link AuthorizedRepresentative.email}.
+     */
+    email: z.string().optional(),
+    /**
+     * See {@link AuthorizedRepresentative.phoneNumber}.
+     */
+    phoneNumber: z.string().optional(),
+    /**
+     * See {@link AuthorizedRepresentative.businessTitle}.
+     */
+    businessTitle: z.string().optional(),
+    /**
+     * See {@link AuthorizedRepresentative.jobPosition}.
+     */
+    jobPosition: z.enum(AuthorizedRepresentativeJobPosition).optional(),
+  });
+
+  /**
+   * Schema for the social and web links block sourced from the shared-helpers
+   * `User.InterfaceLinks` definition.
+   *
+   * Declared here rather than imported because that package ships types only;
+   * the compile-time proof on {@link Schema} is what keeps this copy honest, so
+   * a change to `User.InterfaceLinks` that this schema does not follow becomes a
+   * build failure rather than a silent divergence.
+   */
+  const linksSchema = z.looseObject({
+    /**
+     * Behance profile URL.
+     */
+    behance: z.string().optional(),
+    /**
+     * Dribbble profile URL.
+     */
+    dribbble: z.string().optional(),
+    /**
+     * Facebook page or profile URL.
+     */
+    facebook: z.string().optional(),
+    /**
+     * Instagram profile URL.
+     */
+    instagram: z.string().optional(),
+    /**
+     * LinkedIn profile URL.
+     */
+    linkedin: z.string().optional(),
+    /**
+     * TikTok profile URL.
+     */
+    tiktok: z.string().optional(),
+    /**
+     * X profile URL.
+     */
+    x: z.string().optional(),
+    /**
+     * YouTube channel URL.
+     */
+    youtube: z.string().optional(),
+    /**
+     * Primary website URL.
+     */
+    website: z.string().optional(),
+  });
+
+  /**
+   * Runtime schema producing {@link Interface}.
+   *
+   * This is the parse boundary for an account document, and it is where the
+   * compliance enums stop being a suggestion. Every one of the brand and
+   * campaign registration fields below is a closed set defined by a downstream
+   * provider API: asserting an unrecognised value into {@link BusinessIndustry}
+   * or {@link AppToPersonUseCase} with a cast does not produce a mislabelled
+   * account, it produces a registration submission that is rejected after the
+   * fact, by which point the failure is several systems away from the value that
+   * caused it.
+   *
+   * The queue counters are spread from `messageQueueShape` and the audit fields
+   * from `baseFirestoreShape`, so all three shapes stay validated identically
+   * everywhere rather than drifting between hand-written copies.
+   *
+   * Unknown keys are preserved, matching the `[x: string]: any` index signature
+   * inherited from {@link BaseFirestore}.
+   */
+  export const Schema = z.looseObject({
+    ...baseFirestoreShape,
+    ...messageQueueShape,
+    /**
+     * See {@link Interface.language}.
+     */
+    language: nonEmptyString().optional(),
+    /**
+     * See {@link Interface.image}.
+     */
+    image: nonEmptyString().optional(),
+    /**
+     * See {@link Interface.imageURL}.
+     */
+    imageURL: nonEmptyString().optional(),
+    /**
+     * See {@link Interface.name}.
+     */
+    name: z.string().optional(),
+    /**
+     * See {@link Interface.businessName}.
+     */
+    businessName: z.string().optional(),
+    /**
+     * See {@link Interface.useName}.
+     */
+    useName: z.string().optional(),
+    /**
+     * See {@link Interface.description}.
+     */
+    description: z.string().optional(),
+    /**
+     * See {@link Interface.status}. Validated against {@link Status}: this field
+     * gates whether the message queue runs at all, so a value that is neither a
+     * known status nor `paused` fails open and keeps sending.
+     */
+    status: z.enum(Status).optional(),
+    /**
+     * See {@link Interface.type}.
+     */
+    type: z.enum(Type).optional(),
+    /**
+     * See {@link Interface.uid}.
+     */
+    uid: nonEmptyString().optional(),
+    /**
+     * See {@link Interface.links}.
+     */
+    links: linksSchema.optional(),
+    /**
+     * See {@link Interface.companyType}.
+     */
+    companyType: z.enum(CompanyType).optional(),
+    /**
+     * See {@link Interface.stockExchange}.
+     */
+    stockExchange: z.enum(StockExchange).optional(),
+    /**
+     * See {@link Interface.stockTicker}.
+     */
+    stockTicker: z.string().optional(),
+    /**
+     * See {@link Interface.businessType}.
+     */
+    businessType: z.enum(BusinessType).optional(),
+    /**
+     * See {@link Interface.businessRegionsOfOperations}.
+     */
+    businessRegionsOfOperations: z.enum(BusinessRegionsOfOperations).optional(),
+    /**
+     * See {@link Interface.businessRegistrationIdentifier}.
+     */
+    businessRegistrationIdentifier: z.enum(BusinessRegistrationIdentifier).optional(),
+    /**
+     * See {@link Interface.businessIndustry}.
+     */
+    businessIndustry: z.enum(BusinessIndustry).optional(),
+    /**
+     * See {@link Interface.businessRegistrationNumber}.
+     */
+    businessRegistrationNumber: z.string().optional(),
+    /**
+     * See {@link Interface.authorizedRepresentative1}.
+     */
+    authorizedRepresentative1: authorizedRepresentativeSchema.optional(),
+    /**
+     * See {@link Interface.authorizedRepresentative2}.
+     */
+    authorizedRepresentative2: authorizedRepresentativeSchema.optional(),
+    /**
+     * See {@link Interface.estimatedVolume}. A whole number of messages per
+     * month; {@link Interface.brandType} is derived from it, so a value that
+     * arrived as a string and became `NaN` would select a brand tier by
+     * comparing `NaN` against every threshold and losing every comparison.
+     */
+    estimatedVolume: counter().optional(),
+    /**
+     * See {@link Interface.brandType}.
+     */
+    brandType: z.enum(BrandType).optional(),
+    /**
+     * See {@link Interface.appToPersonUseCase}.
+     */
+    appToPersonUseCase: z.enum(AppToPersonUseCase).optional(),
+    /**
+     * See {@link Interface.tollFreeUseCase}.
+     */
+    tollFreeUseCase: z.string().optional(),
+    /**
+     * See {@link Interface.useCaseDescription}.
+     */
+    useCaseDescription: z.string().optional(),
+    /**
+     * See {@link Interface.useCaseDescriptionCTA}.
+     */
+    useCaseDescriptionCTA: z.string().optional(),
+    /**
+     * See {@link Interface.automaticHeader}.
+     */
+    automaticHeader: z.boolean().optional(),
+    /**
+     * See {@link Interface.postalCode}.
+     */
+    postalCode: z.string().optional(),
+    /**
+     * See {@link Interface.area}.
+     */
+    area: z.string().optional(),
+    /**
+     * See {@link Interface.city}.
+     */
+    city: z.string().optional(),
+    /**
+     * See {@link Interface.street1}.
+     */
+    street1: z.string().optional(),
+    /**
+     * See {@link Interface.street2}.
+     */
+    street2: z.string().optional(),
+    /**
+     * See {@link Interface.country}.
+     */
+    country: z.string().optional(),
+    /**
+     * See {@link Interface.utcOffset}. Whole minutes, not hours: offsets such as
+     * `+05:45` are not expressible in whole hours at all, so an hours value
+     * accepted here would be wrong by a factor of sixty.
+     */
+    utcOffset: z.int().min(-1440).max(1440).optional(),
+    /**
+     * See {@link Interface.domain}.
+     */
+    domain: nonEmptyString().optional(),
+    /**
+     * See {@link Interface.domainOk}.
+     */
+    domainOk: z.boolean().optional(),
+    /**
+     * See {@link Interface.domainTimestamp}. Declared `any`; resolved at this
+     * boundary by `auditTimestamp` rather than by a type that cannot name a
+     * server sentinel.
+     */
+    domainTimestamp: auditTimestamp().optional(),
+    /**
+     * See {@link Interface.alias}.
+     */
+    alias: nonEmptyString().optional(),
+    /**
+     * See {@link Interface.sampleMessage1}.
+     */
+    sampleMessage1: z.string().optional(),
+    /**
+     * See {@link Interface.sampleMessage2}.
+     */
+    sampleMessage2: z.string().optional(),
+    /**
+     * See {@link Interface.sampleMessage3}.
+     */
+    sampleMessage3: z.string().optional(),
+    /**
+     * See {@link Interface.sampleMessage4}.
+     */
+    sampleMessage4: z.string().optional(),
+    /**
+     * See {@link Interface.sampleMessage5}.
+     */
+    sampleMessage5: z.string().optional(),
+    /**
+     * See {@link Interface.bca}.
+     */
+    bca: nonEmptyString().optional(),
+  });
+
+  /**
+   * Compile-time proof that {@link Schema} produces {@link Interface}.
+   *
+   * This also pins {@link Interface.links} against the shared-helpers
+   * `User.InterfaceLinks` definition: if that type gains or changes a field and
+   * `linksSchema` is not updated to match, the divergence is a build failure
+   * here rather than a field silently rejected at runtime.
+   */
+  export type SchemaOutput = AssertSchemaOutput<z.infer<typeof Schema>, Interface>;
+
+  /**
+   * Validates untrusted data as an account document without throwing.
+   *
+   * @param {unknown} value - Untrusted value, typically the raw data of a stored account document.
+   * @return {ParseResult<Interface>} Success carrying the typed account, or failure carrying the reasons.
+   */
+  export const safeParse = (value: unknown): ParseResult<Interface> => parseResult(Schema, value, 'Account.Interface');
+
+  /**
+   * Validates untrusted data as an account document, throwing when it does not
+   * conform.
+   *
+   * @param {unknown} value - Untrusted value, typically the raw data of a stored account document.
+   * @return {Interface} The validated account document.
+   * @throws {ParseError} When the value does not conform to {@link Schema}.
+   */
+  export const parse = (value: unknown): Interface => parseOrThrow(Schema, value, 'Account.Interface');
 }

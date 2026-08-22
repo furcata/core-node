@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { PlaceType } from '../../src/interface/index.js';
+import * as interfaceBarrel from '../../src/interface/index.js';
 import type { BaseFirestore, MessageQueue, BasePlaceData, PlaceData } from '../../src/interface/index.js';
 
 describe('interface/index barrel exports', () => {
@@ -49,5 +50,55 @@ describe('interface/index barrel exports', () => {
       const data: PlaceData = { type: PlaceType.city, local: true };
       expect(data.type).toBe('city');
     });
+  });
+});
+
+describe('interface barrel completeness', () => {
+  /**
+   * Runtime values the barrel is expected to re-export. Types are erased and
+   * cannot be asserted here, so this inventory covers the schemas, the parse
+   * helpers and the field builders — the things a dropped `export *` would
+   * silently remove.
+   */
+  const expectedExports = [
+    'BaseFirestoreSchema',
+    'BasePlaceDataSchema',
+    'MessageQueueSchema',
+    'ParseError',
+    'PlaceDataSchema',
+    'PlaceType',
+    'auditTimestamp',
+    'baseFirestoreShape',
+    'basePlaceDataShape',
+    'counter',
+    'documentId',
+    'epochMillis',
+    'epochSeconds',
+    'finiteNumber',
+    'isTimestampLike',
+    'messageQueueShape',
+    'nonEmptyString',
+    'nonNegativeNumber',
+    'openValue',
+    'parseMessageQueue',
+    'parseOrThrow',
+    'parsePlaceData',
+    'parseResult',
+    'placeDataShape',
+    'requiredKey',
+    'safeParseMessageQueue',
+    'safeParsePlaceData',
+    'timestampLike',
+    'token',
+  ];
+
+  it('should export exactly the expected runtime values', () => {
+    expect(Object.keys(interfaceBarrel).sort()).toEqual(expectedExports);
+  });
+
+  it('should reach the parse boundary through the barrel with validation intact', () => {
+    expect(interfaceBarrel.safeParsePlaceData({ latitude: 91 }).success).toBe(false);
+    expect(interfaceBarrel.safeParseMessageQueue({ pending: 'abc' }).success).toBe(false);
+    expect(interfaceBarrel.safeParseMessageQueue({ pending: 5 }).success).toBe(true);
   });
 });
