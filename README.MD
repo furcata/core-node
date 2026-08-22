@@ -9,6 +9,18 @@ queue contracts used across the system.
 
 > **Repository:** <https://github.com/furcata/core-node.git>
 
+> [!IMPORTANT]
+> **This is a public repository.** The `"private": true` flag in `package.json` means *"never
+> publish to the npm registry"* — it says nothing about GitHub visibility. Source, build output,
+> commit messages and pull request descriptions here are all world-readable.
+>
+> This package is consumed by services that are not public. **Describe what is true about this
+> package; never name where else it is used, its environments, its internal identifiers, or an
+> unfixed weakness elsewhere.** That applies to code comments, test fixtures, commit messages and
+> PR bodies, not just documentation. `.github/scripts/check-private-markers.sh` enforces it in CI —
+> run it locally before pushing.
+
+
 ------
 
 ## Project Overview & Cloud Architecture
@@ -62,8 +74,8 @@ and Google Cloud are **downstream consumers** of this package, not local depende
 | **Module system** | Native ESM — `"type": "module"`, with `Node16` `module` and `moduleResolution`.          |
 | **Data layer**    | Models describe **Firestore** documents. `BaseFirestore` standardises identity, audit timestamps, and TTL (`expiry`) fields for every collection document. |
 | **Linting**       | ESLint `^10` flat config (`eslint.config.js`) via `typescript-eslint` (`recommended` + `stylistic`), scoped to `src/**/*.ts`; `max-len` is `200` (`ignoreComments`, `ignoreUrls`). |
-| **Testing**       | Vitest `^4` (`node` environment) with type-checking through `tsconfig.test.json`.        |
-| **Dependency**    | `@fabricelements/shared-helpers` — the sole runtime dependency (e.g., the `User` type used by the `Account` model). |
+| **Testing**       | Vitest `^4` (`node` environment) for runtime assertions, plus `npm run typecheck` (`tsc -p ./tsconfig.test.json`) for type-level checks. Both are required — see [Type-checking](#type-checking). |
+| **Dependencies**  | `@fabricelements/shared-helpers` (public; e.g. the `User` type used by the `Account` model), pinned to an exact commit SHA, and `zod` `^4.4.3` for runtime schemas. |
 
 ### Active development source tree
 
@@ -98,21 +110,33 @@ core-node/
 > The `src/model/` ↔ `src/interface/` split mirrors the public `exports` map in `package.json`:
 > `"./model" → "./lib/model/index.js"` and `"./interface" → "./lib/interface/index.js"`.
 
-### 🔴 Strict blacklist notice — `/lib` is auto-generated build output
+### 🔴 `/lib` is generated build output — AND it is committed
 
 > [!CAUTION]
-> **The `/lib` directory contains auto-generated build targets. NEVER edit it manually, and
-> completely ignore it during development.**
+> **`/lib` is auto-generated. Never edit it by hand. But it *is* committed to git, and it is the
+> code consumers actually execute — so it must be rebuilt and committed whenever `src/` changes.**
 >
-> - `/lib` is produced **exclusively** by the TypeScript compiler (`tsc`, `outDir: lib`) and is
->   wiped and regenerated on every build by the `clear` script (`rm -rf ./lib`).
-> - **Never** edit, create, or delete any file under `/lib` — including every `.js` and `.d.ts`
->   artifact. Any change there is silently overwritten on the next compile.
-> - **Never** edit compiled `.js` artifacts anywhere. All development happens in `.ts` source
->   files under `src/`.
-> - To change runtime behaviour, edit the matching `.ts` source in `src/` and recompile.
-> - Tooling already enforces this boundary: ESLint ignores `lib/*` (alongside `node_modules/*`,
->   `.github/*`, and `functions/*`).
+> `package.json` `exports` points directly at `./lib/model/index.js` and `./lib/interface/index.js`,
+> and there is **no** `prepare` or `prepack` script. Installing this package straight from GitHub
+> therefore performs **no build**: the consumer runs the committed `/lib`.
+>
+> **Reviewers read `src/`. Consumers execute `lib/`. Those are different files.** A change to
+> `src/` can be authored, reviewed, approved and merged and still never run, because the compiled
+> output was never regenerated. The pull request diff looks perfectly correct — `src/` is exactly
+> what it claims to be — so nothing in the review surface can reveal it.
+>
+> The rules that follow:
+>
+> - `/lib` is produced **exclusively** by `tsc` (`outDir: lib`) and is wiped and regenerated on
+>   every build by the `clear` script (`rm -rf ./lib`).
+> - **Never** hand-edit any `.js` or `.d.ts` under `/lib`; the next build destroys it.
+> - **Never** read `/lib` as a source of truth — use `src/`.
+> - ✅ **After any change to `src/`, run `npm run build` and commit the regenerated `/lib` in the
+>   same commit.** Source and output are one atomic unit.
+> - Verify before pushing: `git status --porcelain -- lib/` must be empty after a build.
+>   **CI fails the job on drift.**
+> - ESLint ignores `lib/*` (alongside `node_modules/*`, `.github/*`, and `functions/*`).
+
 
 ## Local Setup & Firebase Emulation
 
@@ -219,8 +243,25 @@ $ npx vitest run --coverage # coverage report
 
 ### Type-checking
 
-Vitest is configured to type-check the test tree using `tsconfig.test.json` (see `typecheck` in
-`vitest.config.ts`), so type errors in tests surface during runs.
+> [!IMPORTANT]
+> **`npm test` cannot fail on a type change, and `npm run typecheck` is a separate, required gate.**
+>
+> TypeScript interfaces are **erased at runtime**. A test that declares an object literal and reads
+> a property back exercises JavaScript, not the source: deleting `pending?: number` outright from
+> `src/interface/queue.ts` still leaves **480/480 tests passing, exit 0**. Only enum-backed
+> assertions can fail at runtime, because an enum is a real runtime value.
+
+```shell
+$ npm run typecheck   # tsc -p ./tsconfig.test.json — type-checks test/ against src/
+```
+
+This catches what the suite cannot: a deleted interface field, a wrong-typed assignment, and a
+removed enum member each make it exit non-zero.
+
+> ⚠️ `npx vitest run --typecheck` is **not** this gate. Vitest's `typecheck.include` defaults to
+> `**/*.test-d.ts` and this repository has no such files, so it type-checks **zero** files and
+> reports `Type Errors  no errors` regardless of what is broken. Use `npm run typecheck`.
+
 
 ### Safe testing of Firebase-dependent code
 
@@ -239,8 +280,19 @@ network requests, disk I/O, or live cloud/Firestore calls.
 ### Continuous Integration
 
 Pushes and pull requests targeting `main` run the **Node CI** workflow
-(`.github/workflows/nodejs.yml`) on Node `22.x` and `24.x`. Each job runs `npm ci`, then
-`npm run build` (lint + compile), then `npm test`. Changes must keep all of these green.
+(`.github/workflows/nodejs.yml`) on Node `22.x` and `24.x`. Each job runs, in order:
+
+| Step | Command | Fails when |
+|---|---|---|
+| Install | `npm ci` | lockfile and manifest disagree |
+| Build | `npm run build` | lint or compile error |
+| **Build-output drift** | `git status --porcelain -- lib/` | committed `/lib` is stale |
+| **Private markers** | `.github/scripts/check-private-markers.sh` | a private marker or attribution trailer appears in a file, commit message or authorship |
+| Test | `npm test` | a runtime assertion fails |
+| **Typecheck** | `npm run typecheck` | a type-level regression |
+
+Changes must keep all of these green.
+
 
 ## AI-Assisted Engineering Rules
 
@@ -251,7 +303,19 @@ contribute:
 > **Read [`.github/copilot-instructions.md`](.github/copilot-instructions.md) before contributing —
 > with code or with an AI assistant.**
 
+Task-scoped detail lives in [`.github/instructions/`](.github/instructions/):
+
+| File | Covers |
+|---|---|
+| [`cross-repo.instructions.md`](.github/instructions/cross-repo.instructions.md) | **Read first.** Public-repository rules, why types are a security control here, the committed-output hazard, evidence standards, agent conduct. |
+| [`security.instructions.md`](.github/instructions/security.instructions.md) | Measured current state, sweep recipes with positive controls, and what is deliberately left alone. |
+| [`serialized-models.instructions.md`](.github/instructions/serialized-models.instructions.md) | Model and interface conventions — this package **is** the serialized model layer. |
+| [`tests.instructions.md`](.github/instructions/tests.instructions.md) | Vitest conventions, and why the suite cannot fail on an erased type. |
+| [`documentation.instructions.md`](.github/instructions/documentation.instructions.md) | JSDoc conventions. |
+| [`readme.instructions.md`](.github/instructions/readme.instructions.md) | README / CONTRIBUTING maintenance. |
+
 It is the source of truth for the standards summarised below:
+
 
 - **Strict typing.** Use precise TypeScript types and explicit declarations; never rely on banned
   or unsafe types such as `Function` or `Object` — use a concrete signature, `unknown`, or the
@@ -269,8 +333,16 @@ It is the source of truth for the standards summarised below:
 - **Separation of concerns.** Keep `src/model/` and `src/interface/` as pure, transport-agnostic
   data contracts — no trigger wiring, side effects, or I/O. Prefer `async`/`await` over raw
   `.then()/.catch()` chains.
-- **Respect the `/lib` blacklist.** Implement only in `.ts` files under `src/`; never edit `/lib`
-  or compiled `.js` artifacts (see the blacklist notice above).
+- **Respect the `/lib` rules.** Implement only in `.ts` files under `src/`; never hand-edit `/lib`
+  or compiled `.js` artifacts — **and rebuild and commit `/lib` in the same commit as any `src/`
+  change** (see the caution above).
+- **Evidence standards.** Positive-control every probe: a grep that cannot demonstrate a true
+  positive is not evidence. Prove a test can fail by mutating what it checks and watching it go
+  red. Record negative results rather than dropping them.
+- **Never add a `Co-authored-by:` trailer** to any commit or pull request. Check both the messages
+  and the **authorship** — a squash merge synthesises the trailer server-side from commit
+  authorship, which no local hook can intercept.
+
 
 **Before opening a Pull Request,** ensure your AI chat assistant is grounded in
 `.github/copilot-instructions.md` so generated code, comments, and tests stay 100% consistent with

@@ -6,6 +6,10 @@
     "types": [
       "node",
       "vitest/globals"
+    ],
+    "typeRoots": [
+      "node_modules/@types",
+      "node_modules"
     ]
   },
   "include": [
