@@ -161,10 +161,28 @@ Conventions, which differ from `test/`:
   the proof the settings are genuinely permissive, and they make the config self-pinning.
 - **Fixtures must be obviously synthetic.** This repository is public.
 
-Mutation-validated, as §4 requires: reintroducing `data?: undefined` on the parse failure branch,
-rebuilding, and re-running both gates turns `npm run typecheck:consumer` **red** (`TS2578`) while
-`npm run typecheck` stays **green**. That divergence is the reason the gate exists — a gate that
-never disagrees with an existing one is not adding a check, it is adding a duplicate.
+Mutation-validated as §4 requires, with a 2×2 rather than a single cell — because the obvious
+one-cell experiment gives the wrong answer and would have been reported as a success:
+
+| `ParseFailure` | strict assertion form in `test/` | `npm run typecheck` | `npm run typecheck:consumer` |
+|---|---|---|---|
+| property omitted (as shipped) | shallow `result.data` | green `0` | green `0` |
+| `data?: undefined` | shallow `result.data` | **red `2`** | **red `2`** |
+| property omitted (as shipped) | deep `result.data.amount` | green `0` | green `0` |
+| `data?: undefined` | deep `result.data.amount` | **green `0`** | **red `2`** |
+
+Row 2 is why "reintroduce the marker and watch only the new gate fail" does not work here: the
+existing assertions read the **shallow** property, and `Property 'data' does not exist` fires under
+every setting, so the strict gate catches that mutation too. Row 4 is the divergence. Deepening the
+read to `result.data.amount` — the natural way to write it, and what the guarantee is actually
+about — leaves the strict gate green under the marker, because `TS18048` keeps its directive used.
+Only the consumer gate reports `TS2578`. Row 3 is the control that rules out "the deep test is
+simply broken". The identical 2×2 on `member?: undefined` and `MemberMiss` behaves the same way,
+failing the fixture's other two directives.
+
+So the strict gate's coverage of this class is **incidental to how one line was phrased**; the
+consumer gate's is structural. All four `@ts-expect-error` directives in the fixture have been
+observed failing under the mutation they exist to catch — none of them is vacuous.
 
 The rule this enforces is in
 [`serialized-models.instructions.md`](serialized-models.instructions.md) §8.

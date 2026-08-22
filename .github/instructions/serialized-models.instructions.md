@@ -162,6 +162,12 @@ and `noImplicitAny` **off**. Add a case there whenever you add a type-level guar
 
 - express the negative with `@ts-expect-error` **plus a description** — if the guarantee breaks, the
   expected error stops occurring, the directive goes unused, and the compile fails with `TS2578`;
+- **in the strict gate (`test/`), read shallow, not deep, when the guarantee is property absence.**
+  `r.data` fails with `Property 'data' does not exist`, which fires under every setting;
+  `r.data.amount` fails with `TS18048` under strict, so a re-added marker keeps that directive used
+  and the strict gate stays green while protecting nobody. In the consumer fixture either form
+  works — it reads deep because that is the runtime hazard being modelled. Measured both ways; see
+  [`tests.instructions.md`](tests.instructions.md) §6;
 - pair it with the narrowed positive, so a type that is merely unusable cannot satisfy the negative;
 - keep the inert same-shape control that carries no directive and must compile clean. It is the
   proof the settings are genuinely permissive, and it makes the config self-pinning: restore

@@ -46,6 +46,13 @@
  *   guarantee breaks, the expected error disappears, the directive becomes
  *   unused, and `tsc` fails with TS2578. The assertion therefore fails when
  *   the guarantee breaks *and* when it stops being tested.
+ * - The reads below are **deep** (`.data.amount`, not `.data`), which is the
+ *   runtime hazard being modelled and is what makes this file disagree with the
+ *   strict gate. The mirror-image rule applies over in `test/`: the equivalent
+ *   assertions there are deliberately **shallow**, because a deep read fails
+ *   under strict with TS18048 even when the marker is back, which keeps that
+ *   directive used and that gate green. Measured; see
+ *   `.github/instructions/tests.instructions.md` §6 for the full 2×2.
  * - The `INERT CONTROL` blocks are the same-shape known-positive. They carry
  *   **no** directive and must compile clean. They are the proof that these
  *   settings really are permissive enough to miss the inert form — without

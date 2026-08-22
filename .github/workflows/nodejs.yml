@@ -127,11 +127,18 @@ jobs:
       # the drift check deliberately: the declarations it reads are only
       # current because those two steps already passed.
       #
-      # Positive-controlled, not assumed. Reintroducing `data?: undefined` on
-      # the failure branch, rebuilding, and re-running both gates turns THIS
-      # step red (TS2578, the expected error stopped occurring) while
-      # `npm run typecheck` stays green — which is the entire point, since a
-      # gate that never disagrees with an existing one adds nothing.
+      # Mutation-validated with a 2×2, because the obvious one-cell experiment
+      # gives the wrong answer. Reintroducing `data?: undefined` on the failure
+      # branch turns BOTH this step and `npm run typecheck` red — the existing
+      # assertions in test/interface/schema.test.ts read the SHALLOW property
+      # `result.data`, and a property-existence error fires under every setting.
+      # The strict gate's coverage there is incidental to how one line was
+      # phrased. Rewrite those reads as `result.data.amount`, which is the
+      # natural way to express the guarantee, and the marker mutation leaves
+      # `npm run typecheck` GREEN (TS18048 keeps its directive used) while this
+      # step goes RED with TS2578. Control cell: the same deep reads with the
+      # correct type leave both green. The same 2×2 on `member?: undefined` and
+      # MemberMiss behaves identically. That is the divergence this step is for.
       - name: Typecheck (published declarations under consumer conditions)
         run: npm run typecheck:consumer
         env:
