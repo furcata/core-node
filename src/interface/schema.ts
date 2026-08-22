@@ -340,18 +340,18 @@ export const parseOrThrow = <TSchema extends z.ZodType>(
  * Wraps a schema so that the object key it validates is inferred as
  * **required** rather than optional.
  *
- * ## Why this is necessary, and why it is specific to this repository
+ * ## Why this exists, and its current status
  *
- * `tsconfig.json` sets `strict: true` and then overrides it with
+ * This wrapper was introduced to work around a type-inference collapse caused by
  * `strictNullChecks: false`. Under that setting `undefined` is assignable to
  * everything, so a type of the form `"optional" | undefined` collapses to
  * `"optional"` — and that is exactly how zod carries its per-schema optionality
  * marker for several wrapper schemas, including `z.union`, `z.nullable` and
  * `z.nonoptional`. Zod decides an object key's optionality by testing that
- * marker, so in this repository **every required key whose schema is one of
- * those wrappers is inferred as optional**.
+ * marker, so under that setting **every required key whose schema is one of
+ * those wrappers was inferred as optional**.
  *
- * The consequence is not cosmetic: a parse helper would return a type claiming
+ * The consequence was not cosmetic: a parse helper would return a type claiming
  * a field may be absent when at runtime it never is, and every consumer would
  * then write a defensive `?? fallback` for a case that cannot occur — which is
  * how a default value gets into a code path that had no need of one.
@@ -361,9 +361,19 @@ export const parseOrThrow = <TSchema extends z.ZodType>(
  * one preserves the runtime validation exactly — the inner schema still decides
  * what is accepted — while restoring the correct inferred optionality.
  *
- * The trade-off is error granularity: a failure reports one issue at the key's
- * path rather than the inner schema's per-member detail, which is why the
- * message is a required argument rather than a generic default.
+ * **`strictNullChecks` is now enabled, so the collapse no longer occurs.**
+ * Verified by inferring `z.object({u: z.union([...])})` and observing that the
+ * required key is now correctly reported as missing (`TS2741`) where it
+ * previously type-checked clean. The wrapper is therefore no longer necessary
+ * for its original purpose, and is retained only so that removing it — which
+ * changes the errors reported at its two call sites — is a deliberate change
+ * with its own tests rather than a side effect of a compiler-flag change.
+ *
+ * The trade-off it carries is error granularity: a failure reports one issue at
+ * the key's path rather than the inner schema's per-member detail, which is why
+ * the message is a required argument rather than a generic default. That
+ * trade-off is now a cost without a corresponding benefit, so prefer the inner
+ * schema directly for new code, and see the note above before adding a call.
  *
  * @template TSchema The inner schema, which performs the actual validation.
  * @param {TSchema} schema - Schema describing the accepted values.

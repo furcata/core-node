@@ -165,7 +165,7 @@ describe('MessageQueueSchema', () => {
   describe('unknown-key policy', () => {
     it('should preserve an undeclared field rather than dropping it', () => {
       const parsed = parseMessageQueue({ pending: 1, legacyCounter: 9 });
-      expect(parsed['legacyCounter']).toBe(9);
+      expect((parsed as unknown as Record<string, unknown>)['legacyCounter']).toBe(9);
     });
   });
 

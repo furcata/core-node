@@ -76,9 +76,9 @@ member's value produced **3 failed, exit 1**.
 - **Structure.** Arrange–Act–Assert inside descriptive nested `describe()` / `it()` blocks.
 - **Isolation.** Zero network, zero disk I/O, zero cloud or emulator access. The suite must be
   safe to run anywhere, against anything. It currently is; keep it that way.
-- **No lint escape hatches.** No `// eslint-disable*`. Note that `eslint.config.js` scopes `files`
-  to `src/**/*.ts`, so **`test/` is not currently linted** — do not read a green `npm run lint` as
-  a statement about test files.
+- **No lint escape hatches.** No `// eslint-disable*`. `eslint.config.js` `files` covers both
+  `src/**/*.ts` and `test/**/*.ts`, so test files are linted with type-aware rules —
+  `parserOptions.project` lists both `tsconfig.json` and `tsconfig.test.json` so they resolve.
 
 ---
 
