@@ -6,7 +6,37 @@
 > `package.json`, `tsconfig.json`, `tsconfig.test.json`, `eslint.config.js`, `vitest.config.ts`,
 > and `.github/workflows/nodejs.yml` of *this* repository — not from boilerplate.
 
+> ## 🔴 THIS IS A PUBLIC REPOSITORY
+>
+> `"private": true` in `package.json` means **"never publish to the npm registry."** It says
+> **nothing** about GitHub visibility, and misreading it as though it did is the single most
+> expensive mistake available in this repository. Source, build output, commit messages, pull
+> request titles and bodies are all world-readable.
+>
+> This package is consumed by services that are **not** public. **Describe what is true about this
+> package. Never name where else it is used, never name environments or internal identifiers, and
+> never describe an unfixed weakness in another system.** References may flow private → public,
+> never the reverse.
+>
+> This applies to code comments, config comments, test fixtures, commit messages and PR
+> descriptions — not just documentation. Enforced by
+> `.github/scripts/check-private-markers.sh` in CI; run it locally before pushing.
+
+## 📁 Detailed instructions live in `.github/instructions/`
+
+This file is the global summary. The detailed, task-scoped rules are:
+
+| File | Covers |
+|---|---|
+| [`cross-repo.instructions.md`](instructions/cross-repo.instructions.md) | **Read first.** Public-repo rules, the trust model, why types are a security control, the committed-output hazard, evidence standards, agent conduct. |
+| [`security.instructions.md`](instructions/security.instructions.md) | This repo's actual measured state, sweep recipes with positive controls, and what is deliberately left alone. |
+| [`serialized-models.instructions.md`](instructions/serialized-models.instructions.md) | Model/interface conventions. **This package *is* the serialized model layer.** |
+| [`tests.instructions.md`](instructions/tests.instructions.md) | Vitest conventions, and why `npm test` alone cannot fail on a type change. |
+| [`documentation.instructions.md`](instructions/documentation.instructions.md) | JSDoc conventions. |
+| [`readme.instructions.md`](instructions/readme.instructions.md) | README / CONTRIBUTING maintenance. |
+
 ---
+
 
 ## 1. Project Stack Reality & Workspace Bounding
 
@@ -21,24 +51,37 @@
 | **Linting** | `eslint@^10` flat config (`eslint.config.js`) using `typescript-eslint@^8`, composing `eslint.configs.recommended` + `tseslint.configs.recommended` + `tseslint.configs.stylistic`. Scoped to `src/**/*.ts`. `max-len` is `200` (`ignoreComments`, `ignoreUrls`). |
 | **Testing** | `vitest@^4` in the `node` environment, with type-checking via `tsconfig.test.json`. |
 | **Cloud / Firebase context** | This package targets **Firebase Cloud Functions** and **Firestore** as its *consumers*. There is intentionally **no** `firebase.json`, emulator config, or Cloud Functions runtime in this repo, and **no** `firebase-admin` / `firebase-functions` dependency installed here. Firebase is downstream context, not a local dependency — do not add Firebase packages unless the task explicitly requires it. |
-| **Sole runtime dependency** | `@fabricelements/shared-helpers` (e.g. the `User` type used by the `Account` model). |
+| **Runtime dependencies** | `@fabricelements/shared-helpers` (public; e.g. the `User` type used by the `Account` model), pinned to an exact commit SHA — and `zod` `^4.4.3` for runtime schemas. |
 | **Public entry points** | `exports` map: `"./model" → "./lib/model/index.js"` and `"./interface" → "./lib/interface/index.js"`. |
 | **Source layout** | `src/model/` (entity namespaces: `Account`, `Block`, `EventData`, `MessagingEvent`, `Post`, `Price`) and `src/interface/` (`base_db.ts`, `queue.ts`, `place.ts`). Each folder has a barrel `index.ts`. |
 
-### 🔴 CRITICAL `/lib` BLACKLIST
+### 🔴 CRITICAL `/lib` RULES — it is COMMITTED, and consumers execute it
 
-`/lib` is an **immutable, auto-generated build target**. It is produced exclusively by the
-TypeScript compiler (`tsc`, `outDir: lib`) and is wiped and regenerated on every build by the
-`clear` script (`rm -rf ./lib`).
+`/lib` is an auto-generated build target produced exclusively by the TypeScript compiler
+(`tsc`, `outDir: lib`), wiped and regenerated on every build by the `clear` script (`rm -rf ./lib`).
+
+**But it is also committed to git — 22 tracked files, not ignored — and it is what consumers
+actually run.** `package.json` `exports` points straight at `./lib/model/index.js` and
+`./lib/interface/index.js`, and there is **no** `prepare`/`prepack` script, so installing this
+package directly from git performs **no build**.
+
+> **Consequence: reviewers read `src/`, consumers execute `lib/`. Those are different files.**
+> A change to `src/` can be authored, reviewed, approved and merged and still never run, because
+> the compiled output was never regenerated. The PR diff looks perfectly correct — `src/` is
+> exactly what it claims to be — so nothing in the review surface can expose it.
 
 **System mandate — every AI agent MUST obey all of the following:**
 
 - **NEVER read or take context from `/lib`.** It is generated output and is not a source of truth. Use `src/` for all understanding.
-- **NEVER edit, create, or delete any file inside `/lib`.** This includes every `.js` and `.d.ts` file there.
-- **NEVER direct, suggest, or apply modifications to `/lib`.** Any change there is silently overwritten on the next compile.
+- **NEVER edit, create, or delete any file inside `/lib` by hand.** Any such change is destroyed by the next build.
 - **NEVER edit compiled `.js` artifacts anywhere.** All development happens exclusively in `.ts` source files under `src/`.
-- The local `/lib` build is updated **solely** by running `npm run build`. To change runtime behaviour, edit the matching `.ts` source in `src/` and recompile.
-- Tooling already enforces this boundary: ESLint ignores `lib/*` (alongside `node_modules/*`, `.github/*`, `functions/*`).
+- **After ANY change to `src/`, run `npm run build` and commit the regenerated `/lib` in the SAME
+  commit.** A source change and its compiled output are one atomic unit. Splitting them lets a
+  partial landing leave consumers executing code nobody reviewed.
+- **Verify before you push:** `git status --porcelain -- lib/` must be empty after a build. CI
+  enforces this and fails on drift.
+- Tooling already enforces the read boundary: ESLint ignores `lib/*` (alongside `node_modules/*`, `.github/*`, `functions/*`).
+
 
 ---
 
@@ -149,8 +192,18 @@ Any update to the root `README.MD` must:
 | Build (watch) | `npm run build:watch` |
 | Compile only | `npm run compile` (`tsc -p ./tsconfig.json`) |
 | Test (CI mode) | `npm test` (`vitest run`) |
+| **Typecheck (required)** | `npm run typecheck` (`tsc -p ./tsconfig.test.json`) |
 | Test (direct / watch / coverage) | `npx vitest run` · `npx vitest` · `npx vitest run --coverage` |
+| Private-marker check | `./.github/scripts/check-private-markers.sh` |
+| Build-output drift check | `npm run build && git status --porcelain -- lib/` (must be empty) |
+
+> **`npm test` and `npm run typecheck` check different things and both are required.** TypeScript
+> interfaces are erased at runtime, so the Vitest suite **cannot fail** on an interface change:
+> deleting a field outright from `src/interface/queue.ts` leaves all 480 tests passing. Type-level
+> regressions are caught only by `npm run typecheck`. Note also that `npx vitest run --typecheck`
+> is **not** the gate — Vitest's `typecheck.include` defaults to `**/*.test-d.ts`, and this repo
+> has none, so it checks zero files and always reports "no errors".
 
 > **CI gate:** `.github/workflows/nodejs.yml` runs on `push`/`pull_request` to `main` across Node
-> `22.x` and `24.x`, executing `npm ci` → `npm run build` → `npm test`. Changes must keep all of
-> these green.
+> `22.x` and `24.x`, executing `npm ci` → `npm run build` → build-output drift check →
+> private-marker check → `npm test` → `npm run typecheck`. Changes must keep all of these green.

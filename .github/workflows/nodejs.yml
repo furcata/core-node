@@ -95,3 +95,15 @@ jobs:
         run: npm test
         env:
           CI: true
+
+      # `npm test` alone cannot fail on a type-level change: TypeScript interfaces
+      # are erased at runtime, so a test that declares an object literal and reads
+      # a property back still passes after the field is deleted from the source.
+      # Verified by deleting a field from an interface and observing 480/480 tests
+      # still pass. This step is what makes type-level regressions detectable, and
+      # it is positive-controlled: deleting an interface field, assigning a wrong
+      # type, and removing a referenced enum member each make it exit non-zero.
+      - name: Typecheck (tests against source types)
+        run: npm run typecheck
+        env:
+          CI: true
