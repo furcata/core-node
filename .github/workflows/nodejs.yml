@@ -24,6 +24,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history so the private-marker check can scan commit messages
+          # and authorship across the range under review, not just the tip.
+          fetch-depth: 0
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -36,6 +40,54 @@ jobs:
 
       - name: Build (lint + compile)
         run: npm run build
+        env:
+          CI: true
+
+      # `lib/` is committed and `exports` points at it, and there is no `prepare`
+      # script — so installing this package straight from git performs no build,
+      # and consumers execute the committed output. That makes `lib/` the code
+      # that runs while `src/` is the code that gets reviewed. Without this check
+      # a stale `lib/` passes CI green, and an approved change to `src/` silently
+      # never reaches consumers: the diff looks perfectly correct, because `src/`
+      # is exactly what it claims to be. Nothing in the review surface can expose
+      # that, which is why it is enforced here rather than left to reviewers.
+      #
+      # `git status --porcelain` is used deliberately instead of the more obvious
+      # `git diff --exit-code`. `git diff` only sees TRACKED files, so a NEW
+      # module added under `src/` compiles to UNTRACKED files under `lib/` and
+      # `git diff` exits 0 — measured, not assumed. That is precisely the case
+      # that arises whenever someone adds a module, so the obvious form would
+      # have been inert exactly when it was most needed.
+      - name: Verify committed build output is current
+        run: |
+          drift="$(git status --porcelain -uall -- lib/)"
+          if [ -n "$drift" ]; then
+            echo "::error::lib/ is stale. Run 'npm run build' and commit the regenerated lib/ in the SAME commit as your src/ change."
+            echo "Drift between the committed lib/ and a clean build of src/:"
+            echo "$drift"
+            echo "--- diff of tracked build output ---"
+            git --no-pager diff -- lib/
+            exit 1
+          fi
+          echo "OK: committed lib/ matches a clean build of src/."
+        env:
+          CI: true
+
+      # This repository is public. Scans tracked files, commit messages and
+      # authorship. Commit messages are included because they never appear in a
+      # file diff and are therefore the vector least likely to be caught by
+      # review. The script self-tests its own patterns on every run, so a pass
+      # means the patterns were demonstrated working rather than merely trusted.
+      - name: Check for private markers and attribution trailers
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -n "$BASE" ] && git rev-parse --quiet --verify "$BASE" >/dev/null 2>&1; then
+            RANGE="$BASE..HEAD"
+          else
+            RANGE="origin/${{ github.event.repository.default_branch }}..HEAD"
+          fi
+          echo "Scanning range: $RANGE"
+          ./.github/scripts/check-private-markers.sh "$RANGE"
         env:
           CI: true
 
