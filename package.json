@@ -23,7 +23,7 @@
     "./interface": "./lib/interface/index.js"
   },
   "dependencies": {
-    "@fabricelements/shared-helpers": "github:FabricElements/shared-helpers#8c17a299c20402dcc9f93f281608071be58e08cd",
+    "@fabricelements/shared-helpers": "github:FabricElements/shared-helpers#31ef85e7c011149749742243f13d096f8e6cb629",
     "zod": "^4.4.3"
   },
   "devDependencies": {
