@@ -6,6 +6,8 @@
 import { describe, it, expect } from 'vitest';
 import { PlaceType } from '../../src/interface/place.js';
 import type { BasePlaceData, PlaceData } from '../../src/interface/place.js';
+import { BasePlaceDataSchema, PlaceDataSchema, parsePlaceData, safeParsePlaceData } from '../../src/interface/place.js';
+import { ParseError } from '../../src/interface/schema.js';
 
 describe('PlaceType', () => {
   describe('enum values', () => {
@@ -275,6 +277,196 @@ describe('PlaceData', () => {
       expect(data.id).toBe('nyc-001');
       expect(data.type).toBe(PlaceType.city);
       expect(data.timeZoneId).toBe('America/New_York');
+    });
+  });
+});
+
+/**
+ * A place document that must parse.
+ */
+const validPlace = (): Record<string, unknown> => ({
+  id: 'place_synthetic',
+  created: '2026-01-01T00:00:00.000Z',
+  updated: '2026-01-02T00:00:00.000Z',
+  area: null,
+  areas: [1, 2],
+  city: 'Synthetic City',
+  country: 'US',
+  latitude: 40.5,
+  longitude: -74.5,
+  local: true,
+  postalCode: 12345,
+  timeOffset: -300,
+  timeZoneId: 'Etc/UTC',
+  timeZoneName: 'Coordinated Universal Time',
+  type: PlaceType.city,
+  viewport: {
+    northeast: { latitude: 41, longitude: -74 },
+    southwest: { latitude: 40, longitude: -75 },
+  },
+});
+
+describe('BasePlaceDataSchema', () => {
+  describe('field inventory', () => {
+    it('should declare exactly the mixin fields', () => {
+      expect(Object.keys(BasePlaceDataSchema.shape).sort()).toEqual([
+        'area',
+        'country',
+        'geohash',
+        'latitude',
+        'location',
+        'longitude',
+        'placeId',
+        'placeName',
+        'utcOffset',
+      ]);
+    });
+  });
+
+  describe('coordinate validation', () => {
+    it('should accept coordinates within the valid ranges', () => {
+      expect(BasePlaceDataSchema.safeParse({ latitude: 90, longitude: 180 }).success).toBe(true);
+      expect(BasePlaceDataSchema.safeParse({ latitude: -90, longitude: -180 }).success).toBe(true);
+    });
+
+    it('should reject a latitude outside the poles, which cannot exist', () => {
+      expect(BasePlaceDataSchema.safeParse({ latitude: 91 }).success).toBe(false);
+      expect(BasePlaceDataSchema.safeParse({ latitude: -91 }).success).toBe(false);
+    });
+
+    it('should reject a longitude outside the meridians', () => {
+      expect(BasePlaceDataSchema.safeParse({ longitude: 181 }).success).toBe(false);
+      expect(BasePlaceDataSchema.safeParse({ longitude: -181 }).success).toBe(false);
+    });
+
+    it('should reject a numeric-string coordinate rather than coercing it', () => {
+      expect(BasePlaceDataSchema.safeParse({ latitude: '40.5' }).success).toBe(false);
+    });
+
+    it('should reject a UTC offset outside a day either side, or a fractional one', () => {
+      expect(BasePlaceDataSchema.safeParse({ utcOffset: 1441 }).success).toBe(false);
+      expect(BasePlaceDataSchema.safeParse({ utcOffset: 5.5 }).success).toBe(false);
+    });
+  });
+});
+
+describe('PlaceDataSchema', () => {
+  describe('field inventory', () => {
+    it('should declare every field of the interface', () => {
+      expect(Object.keys(PlaceDataSchema.shape).sort()).toEqual([
+        'area',
+        'areaLong',
+        'areas',
+        'city',
+        'cityLong',
+        'country',
+        'countryLong',
+        'created',
+        'id',
+        'latitude',
+        'local',
+        'longName',
+        'longitude',
+        'name',
+        'postalCode',
+        'state',
+        'stateLong',
+        'timeOffset',
+        'timeZoneId',
+        'timeZoneName',
+        'type',
+        'updated',
+        'url',
+        'vicinity',
+        'viewport',
+      ]);
+    });
+  });
+
+  describe('a valid document', () => {
+    it('should parse and return the typed place', () => {
+      const parsed = parsePlaceData(validPlace());
+      expect(parsed.id).toBe('place_synthetic');
+      expect(parsed.type).toBe(PlaceType.city);
+      expect(parsed.viewport?.northeast.latitude).toBe(41);
+    });
+
+    it('should accept an empty object, because every field is optional', () => {
+      expect(safeParsePlaceData({}).success).toBe(true);
+    });
+  });
+
+  describe('enum rejection', () => {
+    it('should accept every declared place type', () => {
+      for (const type of Object.values(PlaceType)) {
+        expect(safeParsePlaceData({ ...validPlace(), type }).success).toBe(true);
+      }
+    });
+
+    it('should reject a type that is not a declared member', () => {
+      for (const type of ['province', 'City', 'CITY', 'region', '']) {
+        const result = safeParsePlaceData({ ...validPlace(), type });
+        expect(result.success).toBe(false);
+        expect(result.issues?.some((issue) => issue.path === 'type')).toBe(true);
+      }
+    });
+  });
+
+  describe('the postal code', () => {
+    it('should accept a numeric code and an explicit null', () => {
+      expect(safeParsePlaceData({ ...validPlace(), postalCode: 12345 }).success).toBe(true);
+      expect(safeParsePlaceData({ ...validPlace(), postalCode: null }).success).toBe(true);
+    });
+
+    it('should reject a textual code rather than coercing it into NaN', () => {
+      expect(safeParsePlaceData({ ...validPlace(), postalCode: 'SW1A' }).success).toBe(false);
+      expect(Number('SW1A')).toBeNaN();
+    });
+  });
+
+  describe('the viewport', () => {
+    it('should reject a corner missing a coordinate, which leaves an undefined edge', () => {
+      const result = safeParsePlaceData({
+        ...validPlace(),
+        viewport: { northeast: { latitude: 41 }, southwest: { latitude: 40, longitude: -75 } },
+      });
+      expect(result.success).toBe(false);
+      expect(result.issues?.some((issue) => issue.path === 'viewport.northeast.longitude')).toBe(true);
+    });
+
+    it('should reject a viewport missing a whole corner', () => {
+      expect(safeParsePlaceData({
+        ...validPlace(),
+        viewport: { northeast: { latitude: 41, longitude: -74 } },
+      }).success).toBe(false);
+    });
+
+    it('should reject a corner coordinate outside its range', () => {
+      expect(safeParsePlaceData({
+        ...validPlace(),
+        viewport: { northeast: { latitude: 91, longitude: -74 }, southwest: { latitude: 40, longitude: -75 } },
+      }).success).toBe(false);
+    });
+  });
+
+  describe('null-bearing fields', () => {
+    it('should keep an explicit null across a JSON round-trip', () => {
+      const parsed = parsePlaceData(validPlace());
+      expect(JSON.parse(JSON.stringify(parsed)).area).toBeNull();
+    });
+  });
+
+  describe('unknown-key policy', () => {
+    it('should preserve an undeclared field rather than dropping it', () => {
+      const parsed = parsePlaceData({ ...validPlace(), legacyField: 'kept' });
+      expect(parsed['legacyField']).toBe('kept');
+    });
+  });
+
+  describe('throwing form', () => {
+    it('should throw a ParseError naming the shape', () => {
+      expect(() => parsePlaceData({ latitude: 91 })).toThrow(ParseError);
+      expect(() => parsePlaceData({ latitude: 91 })).toThrow(/PlaceData failed validation/);
     });
   });
 });

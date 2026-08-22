@@ -2,7 +2,9 @@
  * @license
  * Copyright Furcata. All Rights Reserved.
  */
+import { z } from 'zod';
 import { BaseFirestore } from '../interface/base_db.js';
+import { AssertSchemaOutput, ParseResult } from '../interface/schema.js';
 /**
  * Namespace for messaging event models that represent individual communication
  * interactions (SMS, MMS, voice calls, in-app messages, etc.) recorded in
@@ -163,4 +165,71 @@ export declare namespace MessagingEvent {
             id: string;
         };
     }
+    /**
+     * Runtime schema producing {@link Interface}.
+     *
+     * ### On {@link Interface.type}
+     *
+     * The published field is `Type | string`, so this schema accepts either. That
+     * is deliberate and it is **not** enum validation: narrowing the field to
+     * {@link Type} alone would reject every event stored before the enum existed,
+     * which is a breaking change for consumers rather than a fix. The union is
+     * written out rather than collapsed to `z.string()` so the intended grammar
+     * stays visible at the point a future major version can close it. A caller
+     * that requires strict membership should test the parsed value against
+     * `Object.values(MessagingEvent.Type)` explicitly.
+     *
+     * Unknown keys are preserved, matching the index signature inherited from
+     * {@link BaseFirestore}. That also means a stored `status` value — which
+     * {@link Status} describes but {@link Interface} does not yet declare —
+     * survives a parse and a round-trip untouched.
+     */
+    const Schema: z.ZodObject<{
+        account: z.ZodOptional<z.ZodString>;
+        service: z.ZodOptional<z.ZodString>;
+        language: z.ZodOptional<z.ZodString>;
+        media: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        body: z.ZodOptional<z.ZodString>;
+        type: z.ZodOptional<z.ZodUnion<readonly [z.ZodEnum<typeof Type>, z.ZodString]>>;
+        uid: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        ml: z.ZodOptional<z.ZodBoolean>;
+        unsafe: z.ZodOptional<z.ZodBoolean>;
+        labels: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        errorCodeProvider: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
+        user: z.ZodOptional<z.ZodObject<{
+            avatar: z.ZodOptional<z.ZodString>;
+            firstName: z.ZodOptional<z.ZodString>;
+            lastName: z.ZodOptional<z.ZodString>;
+            name: z.ZodOptional<z.ZodString>;
+            abbr: z.ZodOptional<z.ZodString>;
+            username: z.ZodOptional<z.ZodString>;
+            id: z.ZodString;
+        }, z.core.$loose>>;
+        id: z.ZodOptional<z.ZodString>;
+        backup: z.ZodOptional<z.ZodBoolean>;
+        created: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+        updated: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+        expiry: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+    }, z.core.$loose>;
+    /**
+     * Compile-time proof that {@link Schema} produces {@link Interface}.
+     */
+    type SchemaOutput = AssertSchemaOutput<z.infer<typeof Schema>, Interface>;
+    /**
+     * Validates untrusted data as a messaging event without throwing.
+     *
+     * @param {unknown} value - Untrusted value, typically the raw data of a stored messaging event document.
+     * @return {ParseResult<Interface>} Success carrying the typed event, or failure carrying the reasons.
+     */
+    const safeParse: (value: unknown) => ParseResult<Interface>;
+    /**
+     * Validates untrusted data as a messaging event, throwing when it does not
+     * conform.
+     *
+     * @param {unknown} value - Untrusted value, typically the raw data of a stored messaging event document.
+     * @return {Interface} The validated messaging event.
+     * @throws {ParseError} When the value does not conform to {@link Schema}.
+     */
+    const parse: (value: unknown) => Interface;
 }

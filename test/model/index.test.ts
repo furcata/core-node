@@ -9,6 +9,8 @@ import { EventData } from '../../src/model/index.js';
 import { MessagingEvent } from '../../src/model/index.js';
 import { Post } from '../../src/model/index.js';
 import { Price } from '../../src/model/index.js';
+import { Capacity, Entitlement, Idempotency, Ledger, MessageUsage, Reservation } from '../../src/model/index.js';
+import * as modelBarrel from '../../src/model/index.js';
 
 describe('model/index barrel exports', () => {
   describe('Account namespace re-export', () => {
@@ -131,5 +133,53 @@ describe('model/index barrel exports', () => {
       const price: Price.Interface = { account: 'acct-001', type: Price.Type.event };
       expect(price.account).toBe('acct-001');
     });
+  });
+});
+
+describe('model barrel completeness', () => {
+  /**
+   * The namespaces the barrel is expected to re-export. A dropped `export *` is
+   * otherwise invisible here and only surfaces when a consumer fails to compile,
+   * which is why this is an explicit inventory rather than a spot check.
+   */
+  const expectedNamespaces = [
+    'Account',
+    'Block',
+    'Capacity',
+    'Entitlement',
+    'EventData',
+    'Idempotency',
+    'Ledger',
+    'MessageUsage',
+    'MessagingEvent',
+    'Post',
+    'Price',
+    'Reservation',
+  ];
+
+  it('should export exactly the expected namespaces', () => {
+    expect(Object.keys(modelBarrel).sort()).toEqual(expectedNamespaces);
+  });
+
+  it.each(expectedNamespaces)('should expose a Schema, parse and safeParse on %s', (name) => {
+    const namespace = (modelBarrel as Record<string, Record<string, unknown>>)[name];
+    expect(namespace).toBeDefined();
+    expect(namespace['Schema']).toBeDefined();
+    expect(typeof namespace['parse']).toBe('function');
+    expect(typeof namespace['safeParse']).toBe('function');
+  });
+
+  it('should reach the new namespaces through the barrel with validation intact', () => {
+    expect(Idempotency.safeParse({ state: Idempotency.State.failed, requestHash: 'h' }).success).toBe(true);
+    expect(Ledger.safeParse({ service: 's', scope: 'sc', amount: 'abc' }).success).toBe(false);
+    expect(Reservation.safeParse({ token: 't', identity: 'i', expiresAt: 1767225600000 }).success).toBe(true);
+    expect(Entitlement.safeParse({ account: 'a', uid: 'u', price: 'p', source: 's', type: Price.Type.event }).success).toBe(true);
+    expect(Capacity.safeParse({ uid: 'u', price: 'p', source: 's', type: Price.Type.product, token: 't', generation: 0, expiresAt: 1767225600 }).success).toBe(true);
+    expect(MessageUsage.safeParse({ period: '2026-01-01', token: 't' }).success).toBe(true);
+  });
+
+  it('should share one Price.Type across every namespace that references it', () => {
+    expect(Entitlement.safeParse({ account: 'a', uid: 'u', price: 'p', source: 's', type: 'subscription' }).success).toBe(false);
+    expect(Capacity.safeParse({ uid: 'u', price: 'p', source: 's', type: 'subscription', token: 't', generation: 0, expiresAt: 1767225600 }).success).toBe(false);
   });
 });

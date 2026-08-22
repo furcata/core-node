@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { MessagingEvent } from '../../src/model/MessagingEvent.js';
+import { ParseError } from '../../src/interface/schema.js';
 
 describe('MessagingEvent.Type', () => {
   describe('enum values', () => {
@@ -311,6 +312,142 @@ describe('MessagingEvent.Interface', () => {
         expect(typeof status).toBe('string');
         expect(status.length).toBeGreaterThan(0);
       });
+    });
+  });
+});
+
+/**
+ * A messaging event that must parse.
+ */
+const validEvent = (): Record<string, unknown> => ({
+  account: 'account_synthetic',
+  service: 'service_synthetic',
+  language: 'en',
+  body: 'Synthetic message body',
+  type: MessagingEvent.Type.sms,
+  uid: null,
+  ml: true,
+  unsafe: false,
+  labels: ['synthetic'],
+  error: null,
+  errorCodeProvider: 30007,
+  user: { id: 'uid_synthetic', name: 'Synthetic Sender' },
+});
+
+describe('MessagingEvent.Schema', () => {
+  describe('field inventory', () => {
+    it('should declare every field of the interface plus the inherited audit fields', () => {
+      expect(Object.keys(MessagingEvent.Schema.shape).sort()).toEqual([
+        'account',
+        'backup',
+        'body',
+        'created',
+        'error',
+        'errorCodeProvider',
+        'expiry',
+        'id',
+        'labels',
+        'language',
+        'media',
+        'ml',
+        'service',
+        'type',
+        'uid',
+        'unsafe',
+        'updated',
+        'user',
+      ]);
+    });
+  });
+
+  describe('a valid document', () => {
+    it('should parse and return the typed event', () => {
+      const parsed = MessagingEvent.parse(validEvent());
+      expect(parsed.type).toBe(MessagingEvent.Type.sms);
+      expect(parsed.user?.id).toBe('uid_synthetic');
+    });
+
+    it('should accept every declared channel type', () => {
+      for (const type of Object.values(MessagingEvent.Type)) {
+        expect(MessagingEvent.safeParse({ ...validEvent(), type }).success).toBe(true);
+      }
+    });
+
+    it('should accept an empty object, because every field is optional', () => {
+      expect(MessagingEvent.safeParse({}).success).toBe(true);
+    });
+  });
+
+  describe('the enum-or-string type field', () => {
+    it('should accept a raw string, which is what the published Type | string contract permits', () => {
+      const parsed = MessagingEvent.parse({ ...validEvent(), type: 'legacy_channel' });
+      expect(parsed.type).toBe('legacy_channel');
+    });
+
+    it('should still reject a non-string type', () => {
+      expect(MessagingEvent.safeParse({ ...validEvent(), type: 1 }).success).toBe(false);
+      expect(MessagingEvent.safeParse({ ...validEvent(), type: true }).success).toBe(false);
+    });
+
+    it('should let a caller test strict enum membership on the parsed value', () => {
+      const members = Object.values(MessagingEvent.Type) as string[];
+      expect(members.includes(MessagingEvent.parse(validEvent()).type as string)).toBe(true);
+      expect(members.includes(MessagingEvent.parse({ type: 'legacy_channel' }).type as string)).toBe(false);
+    });
+  });
+
+  describe('the nested sender snapshot', () => {
+    it('should reject a snapshot with no id, which cannot be reconciled against anything', () => {
+      const result = MessagingEvent.safeParse({ ...validEvent(), user: { name: 'Synthetic Sender' } });
+      expect(result.success).toBe(false);
+      expect(result.issues?.some((issue) => issue.path === 'user.id')).toBe(true);
+    });
+
+    it('should reject an empty id', () => {
+      expect(MessagingEvent.safeParse({ ...validEvent(), user: { id: '' } }).success).toBe(false);
+    });
+
+    it('should reject a snapshot that is not an object', () => {
+      expect(MessagingEvent.safeParse({ ...validEvent(), user: 'uid_synthetic' }).success).toBe(false);
+    });
+  });
+
+  describe('the provider error code', () => {
+    it('should accept either a number or a string, as providers differ', () => {
+      expect(MessagingEvent.parse({ ...validEvent(), errorCodeProvider: 30007 }).errorCodeProvider).toBe(30007);
+      expect(MessagingEvent.parse({ ...validEvent(), errorCodeProvider: '30007' }).errorCodeProvider).toBe('30007');
+    });
+
+    it('should never coerce between them', () => {
+      expect(MessagingEvent.parse({ ...validEvent(), errorCodeProvider: '30007' }).errorCodeProvider).not.toBe(30007);
+    });
+
+    it('should reject a code of any other kind', () => {
+      expect(MessagingEvent.safeParse({ ...validEvent(), errorCodeProvider: true }).success).toBe(false);
+      expect(MessagingEvent.safeParse({ ...validEvent(), errorCodeProvider: { code: 1 } }).success).toBe(false);
+    });
+  });
+
+  describe('null-bearing fields', () => {
+    it('should keep an explicit null on error and uid across a JSON round-trip', () => {
+      const parsed = MessagingEvent.parse(validEvent());
+      const roundTripped = JSON.parse(JSON.stringify(parsed));
+      expect(roundTripped.error).toBeNull();
+      expect(roundTripped.uid).toBeNull();
+    });
+  });
+
+  describe('unknown-key policy', () => {
+    it('should preserve a stored status, a field the Status enum describes but the interface does not declare', () => {
+      const parsed = MessagingEvent.parse({ ...validEvent(), status: MessagingEvent.Status.delivered });
+      expect(parsed['status']).toBe(MessagingEvent.Status.delivered);
+    });
+  });
+
+  describe('throwing form', () => {
+    it('should throw a ParseError naming the shape', () => {
+      expect(() => MessagingEvent.parse({ user: {} })).toThrow(ParseError);
+      expect(() => MessagingEvent.parse({ user: {} })).toThrow(/MessagingEvent\.Interface failed validation/);
     });
   });
 });

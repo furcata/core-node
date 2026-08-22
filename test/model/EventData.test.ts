@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { EventData } from '../../src/model/EventData.js';
 import { Block } from '../../src/model/Block.js';
+import { ParseError } from '../../src/interface/schema.js';
 
 describe('EventData.Type', () => {
   describe('enum values', () => {
@@ -273,6 +274,193 @@ describe('EventData.Interface', () => {
       expect(event.name).toBe('Annual Town Hall');
       expect(event.status).toBe('scheduled');
       expect(event.limit).toBe(200);
+    });
+  });
+});
+
+/**
+ * An event document that must parse.
+ */
+const validEvent = (): Record<string, unknown> => ({
+  name: 'Synthetic event',
+  account: 'account_synthetic',
+  type: EventData.Type.online,
+  frequency: EventData.Frequency.weekly,
+  status: EventData.Status.scheduled,
+  uid: null,
+  blocks: [{ type: Block.Type.text, value: 'Synthetic body copy', label: 'Intro' }],
+  currency: 'usd',
+  amount: 2500,
+  users: ['uid_synthetic'],
+  limit: 50,
+  startTime: '2026-01-01T00:00:00.000Z',
+  endTime: { seconds: 1767229200, nanoseconds: 0 },
+  duration: 60,
+  runHour: 9,
+  latitude: 40.5,
+  longitude: -74.5,
+});
+
+describe('EventData.Schema', () => {
+  describe('field inventory', () => {
+    it('should declare the event fields alongside the inherited audit and place fields', () => {
+      const keys = Object.keys(EventData.Schema.shape);
+      for (const field of ['name', 'account', 'blocks', 'startTime', 'endTime', 'runHour', 'limit', 'amount']) {
+        expect(keys).toContain(field);
+      }
+      for (const field of ['id', 'backup', 'created', 'updated', 'expiry']) {
+        expect(keys).toContain(field);
+      }
+      for (const field of ['latitude', 'longitude', 'geohash', 'placeId', 'utcOffset']) {
+        expect(keys).toContain(field);
+      }
+    });
+  });
+
+  describe('a valid document', () => {
+    it('should parse and return the typed event', () => {
+      const parsed = EventData.parse(validEvent());
+      expect(parsed.name).toBe('Synthetic event');
+      expect(parsed.blocks?.length).toBe(1);
+      expect(parsed.runHour).toBe(9);
+    });
+
+    it('should accept an empty object, because every field is optional', () => {
+      expect(EventData.safeParse({}).success).toBe(true);
+    });
+  });
+
+  describe('nested block validation', () => {
+    it('should reject an event whose block carries an undeclared type', () => {
+      const result = EventData.safeParse({
+        ...validEvent(),
+        blocks: [{ type: 'carousel', value: 'x', label: 'l' }],
+      });
+      expect(result.success).toBe(false);
+      expect(result.issues?.some((issue) => issue.path === 'blocks.0.type')).toBe(true);
+    });
+
+    it('should reject an event whose block is missing a required field', () => {
+      const result = EventData.safeParse({ ...validEvent(), blocks: [{ type: Block.Type.text, label: 'l' }] });
+      expect(result.success).toBe(false);
+      expect(result.issues?.some((issue) => issue.path === 'blocks.0.value')).toBe(true);
+    });
+
+    it('should report the failing element index, not just that the array is wrong', () => {
+      const result = EventData.safeParse({
+        ...validEvent(),
+        blocks: [
+          { type: Block.Type.text, value: 'ok', label: 'l' },
+          { type: 'carousel', value: 'x', label: 'l' },
+        ],
+      });
+      expect(result.issues?.some((issue) => issue.path === 'blocks.1.type')).toBe(true);
+    });
+  });
+
+  describe('the deprecated amount field, which is money', () => {
+    it('should reject a non-numeric amount rather than coercing it to NaN', () => {
+      const result = EventData.safeParse({ ...validEvent(), amount: 'abc' });
+      expect(result.success).toBe(false);
+      expect(result.issues?.some((issue) => issue.path === 'amount')).toBe(true);
+    });
+
+    it('should reject NaN and both infinities', () => {
+      expect(EventData.safeParse({ ...validEvent(), amount: Number.NaN }).success).toBe(false);
+      expect(EventData.safeParse({ ...validEvent(), amount: Number.POSITIVE_INFINITY }).success).toBe(false);
+      expect(EventData.safeParse({ ...validEvent(), amount: Number.NEGATIVE_INFINITY }).success).toBe(false);
+    });
+  });
+
+  describe('the enum-or-string fields', () => {
+    it('should accept every declared member of each enum', () => {
+      for (const type of Object.values(EventData.Type)) {
+        expect(EventData.safeParse({ ...validEvent(), type }).success).toBe(true);
+      }
+      for (const frequency of Object.values(EventData.Frequency)) {
+        expect(EventData.safeParse({ ...validEvent(), frequency }).success).toBe(true);
+      }
+      for (const status of Object.values(EventData.Status)) {
+        expect(EventData.safeParse({ ...validEvent(), status }).success).toBe(true);
+      }
+    });
+
+    it('should accept a raw string, which is what the published Enum | string contract permits', () => {
+      expect(EventData.parse({ ...validEvent(), status: 'legacy_status' }).status).toBe('legacy_status');
+    });
+
+    it('should still reject a non-string value on each of them', () => {
+      expect(EventData.safeParse({ ...validEvent(), type: 1 }).success).toBe(false);
+      expect(EventData.safeParse({ ...validEvent(), frequency: true }).success).toBe(false);
+      expect(EventData.safeParse({ ...validEvent(), status: { name: 'active' } }).success).toBe(false);
+    });
+
+    it('should let a caller test strict enum membership on the parsed value', () => {
+      const members = Object.values(EventData.Status) as string[];
+      expect(members.includes(EventData.parse(validEvent()).status as string)).toBe(true);
+      expect(members.includes(EventData.parse({ status: 'legacy_status' }).status as string)).toBe(false);
+    });
+  });
+
+  describe('the runHour field', () => {
+    it('should accept every hour of a UTC day', () => {
+      for (let hour = 0; hour < 24; hour += 1) {
+        expect(EventData.safeParse({ ...validEvent(), runHour: hour }).success).toBe(true);
+      }
+    });
+
+    it('should reject an hour outside the day, which would schedule a job that never fires', () => {
+      expect(EventData.safeParse({ ...validEvent(), runHour: 24 }).success).toBe(false);
+      expect(EventData.safeParse({ ...validEvent(), runHour: -1 }).success).toBe(false);
+    });
+
+    it('should reject a fractional hour', () => {
+      expect(EventData.safeParse({ ...validEvent(), runHour: 9.5 }).success).toBe(false);
+    });
+  });
+
+  describe('the timestamp fields', () => {
+    it('should accept an ISO 8601 string, a Firestore timestamp, a Date and an epoch number', () => {
+      for (const startTime of ['2026-01-01T00:00:00.000Z', { seconds: 1767225600, nanoseconds: 0 }, new Date(1767225600000), 1767225600000]) {
+        expect(EventData.safeParse({ ...validEvent(), startTime }).success).toBe(true);
+      }
+    });
+
+    it('should reject a value that is not any read shape of a timestamp', () => {
+      for (const startTime of [null, '', true, { when: 'soon' }]) {
+        expect(EventData.safeParse({ ...validEvent(), startTime }).success).toBe(false);
+      }
+    });
+
+    it('should preserve a timestamp-like value by reference rather than rebuilding it', () => {
+      const endTime = { seconds: 1767229200, nanoseconds: 0 };
+      expect(EventData.parse({ ...validEvent(), endTime }).endTime).toBe(endTime);
+    });
+  });
+
+  describe('inherited place validation', () => {
+    it('should reject a latitude outside the poles, which is usually a transposed longitude', () => {
+      expect(EventData.safeParse({ ...validEvent(), latitude: 91 }).success).toBe(false);
+      expect(EventData.safeParse({ ...validEvent(), latitude: -91 }).success).toBe(false);
+      expect(EventData.safeParse({ ...validEvent(), longitude: 181 }).success).toBe(false);
+    });
+
+    it('should accept a coordinate pair that is merely unusual but valid', () => {
+      expect(EventData.safeParse({ ...validEvent(), latitude: -74.5, longitude: 40.5 }).success).toBe(true);
+    });
+  });
+
+  describe('unknown-key policy', () => {
+    it('should preserve an undeclared field rather than dropping it', () => {
+      const parsed = EventData.parse({ ...validEvent(), legacyField: 'kept' });
+      expect(parsed['legacyField']).toBe('kept');
+    });
+  });
+
+  describe('throwing form', () => {
+    it('should throw a ParseError naming the shape', () => {
+      expect(() => EventData.parse({ amount: 'abc' })).toThrow(ParseError);
+      expect(() => EventData.parse({ amount: 'abc' })).toThrow(/EventData\.Interface failed validation/);
     });
   });
 });

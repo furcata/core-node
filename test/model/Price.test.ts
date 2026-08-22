@@ -4,6 +4,7 @@
  */
 
 import { Price } from '../../src/model/Price.js';
+import { ParseError } from '../../src/interface/schema.js';
 
 describe('Price.Type', () => {
   describe('enum values', () => {
@@ -235,6 +236,192 @@ describe('Price.Interface', () => {
       expect(price.amount).toBe(2000);
       expect(price.type).toBe('event');
       expect(price.visibility).toBe('public');
+    });
+  });
+});
+
+/**
+ * A price document that must parse. Every negative case below is this object
+ * with one field changed.
+ */
+const validPrice = (): Record<string, unknown> => ({
+  account: 'account_synthetic',
+  amount: 2500,
+  currency: 'usd',
+  source: 'source_synthetic',
+  label: 'Synthetic ticket',
+  limit: 100,
+  type: Price.Type.event,
+  uid: null,
+  users: ['uid_synthetic'],
+  visibility: Price.Visibility.public,
+  clicks: 4,
+  views: 40,
+  checkout: 2,
+  booked: 1,
+});
+
+describe('Price.Schema', () => {
+  describe('field inventory', () => {
+    it('should declare every field of the interface plus the inherited audit fields', () => {
+      expect(Object.keys(Price.Schema.shape).sort()).toEqual([
+        'account',
+        'amount',
+        'backup',
+        'booked',
+        'checkout',
+        'clicks',
+        'created',
+        'currency',
+        'description',
+        'expiry',
+        'id',
+        'image',
+        'label',
+        'limit',
+        'source',
+        'type',
+        'uid',
+        'updated',
+        'users',
+        'views',
+        'visibility',
+      ]);
+    });
+  });
+
+  describe('a valid document', () => {
+    it('should parse and return the typed price', () => {
+      const parsed = Price.parse(validPrice());
+      expect(parsed.account).toBe('account_synthetic');
+      expect(parsed.amount).toBe(2500);
+      expect(parsed.type).toBe(Price.Type.event);
+    });
+
+    it('should parse a minimal document carrying only the required account', () => {
+      const parsed = Price.parse({ account: 'account_synthetic' });
+      expect(parsed.amount).toBeUndefined();
+    });
+  });
+
+  describe('the amount field, which is money', () => {
+    it('should reject a non-numeric amount rather than coercing it to NaN', () => {
+      const result = Price.safeParse({ ...validPrice(), amount: 'abc' });
+      expect(result.success).toBe(false);
+      expect(result.issues?.some((issue) => issue.path === 'amount')).toBe(true);
+      expect(Number('abc')).toBeNaN();
+    });
+
+    it('should reject a numeric string, NaN and both infinities', () => {
+      expect(Price.safeParse({ ...validPrice(), amount: '2500' }).success).toBe(false);
+      expect(Price.safeParse({ ...validPrice(), amount: Number.NaN }).success).toBe(false);
+      expect(Price.safeParse({ ...validPrice(), amount: Number.POSITIVE_INFINITY }).success).toBe(false);
+      expect(Price.safeParse({ ...validPrice(), amount: Number.NEGATIVE_INFINITY }).success).toBe(false);
+    });
+
+    it('should distinguish an absent amount from a zero one', () => {
+      const price = validPrice();
+      delete price['amount'];
+      expect(Price.parse(price).amount).toBeUndefined();
+      expect(Price.parse({ ...validPrice(), amount: 0 }).amount).toBe(0);
+    });
+  });
+
+  describe('enum rejection', () => {
+    it('should accept every declared type and visibility', () => {
+      for (const type of Object.values(Price.Type)) {
+        expect(Price.safeParse({ ...validPrice(), type }).success).toBe(true);
+      }
+      for (const visibility of Object.values(Price.Visibility)) {
+        expect(Price.safeParse({ ...validPrice(), visibility }).success).toBe(true);
+      }
+    });
+
+    it('should reject a type that is not a declared member', () => {
+      for (const type of ['subscription', 'Event', 'EVENT', 'events', '']) {
+        expect(Price.safeParse({ ...validPrice(), type }).success).toBe(false);
+      }
+    });
+
+    it('should reject a visibility that is not a declared member', () => {
+      for (const visibility of ['hidden', 'Public', 'PRIVATE', 'secret', '']) {
+        const result = Price.safeParse({ ...validPrice(), visibility });
+        expect(result.success).toBe(false);
+        expect(result.issues?.some((issue) => issue.path === 'visibility')).toBe(true);
+      }
+    });
+  });
+
+  describe('missing required fields', () => {
+    it('should reject a document with no account', () => {
+      const price = validPrice();
+      delete price['account'];
+      const result = Price.safeParse(price);
+      expect(result.success).toBe(false);
+      expect(result.issues?.some((issue) => issue.path === 'account')).toBe(true);
+    });
+
+    it('should reject an empty account, which a failed lookup would produce', () => {
+      expect(Price.safeParse({ ...validPrice(), account: '' }).success).toBe(false);
+    });
+  });
+
+  describe('the currency code', () => {
+    it('should accept a three-letter ISO 4217 code in either case', () => {
+      expect(Price.safeParse({ ...validPrice(), currency: 'usd' }).success).toBe(true);
+      expect(Price.safeParse({ ...validPrice(), currency: 'EUR' }).success).toBe(true);
+    });
+
+    it('should reject a code of the wrong length or containing digits', () => {
+      for (const currency of ['us', 'usdd', 'us1', '', 'dollars']) {
+        expect(Price.safeParse({ ...validPrice(), currency }).success).toBe(false);
+      }
+    });
+  });
+
+  describe('the uid field', () => {
+    it('should accept an explicit null, which must survive a JSON round-trip', () => {
+      const parsed = Price.parse({ ...validPrice(), uid: null });
+      expect(parsed.uid).toBeNull();
+      expect(JSON.parse(JSON.stringify(parsed)).uid).toBeNull();
+    });
+
+    it('should accept absence, which is a different claim from null', () => {
+      const price = validPrice();
+      delete price['uid'];
+      expect('uid' in Price.parse(price)).toBe(false);
+    });
+  });
+
+  describe('counters', () => {
+    it('should reject a fractional or negative counter', () => {
+      for (const field of ['limit', 'clicks', 'views', 'checkout', 'booked']) {
+        expect(Price.safeParse({ ...validPrice(), [field]: 1.5 }).success).toBe(false);
+        expect(Price.safeParse({ ...validPrice(), [field]: -1 }).success).toBe(false);
+      }
+    });
+
+    it('should reject a numeric string counter rather than coercing it', () => {
+      expect(Price.safeParse({ ...validPrice(), limit: '100' }).success).toBe(false);
+    });
+  });
+
+  describe('unknown-key policy', () => {
+    it('should preserve an undeclared field rather than dropping it', () => {
+      const parsed = Price.parse({ ...validPrice(), legacyField: 'kept' });
+      expect(parsed['legacyField']).toBe('kept');
+    });
+
+    it('should preserve an undeclared field across a full round-trip', () => {
+      const parsed = Price.parse(Price.parse({ ...validPrice(), legacyField: 'kept' }));
+      expect(parsed['legacyField']).toBe('kept');
+    });
+  });
+
+  describe('throwing form', () => {
+    it('should throw a ParseError naming the shape', () => {
+      expect(() => Price.parse({})).toThrow(ParseError);
+      expect(() => Price.parse({})).toThrow(/Price\.Interface failed validation/);
     });
   });
 });

@@ -2,7 +2,9 @@
  * @license
  * Copyright Furcata. All Rights Reserved.
  */
+import { z } from 'zod';
 import { BaseFirestore } from '../interface/base_db.js';
+import { AssertSchemaOutput, ParseResult } from '../interface/schema.js';
 /**
  * Namespace for post models representing social-media content items (e.g.,
  * Instagram reels, YouTube videos, TikToks) that are imported, curated, and
@@ -170,4 +172,71 @@ export declare namespace Post {
          */
         likes?: number;
     }
+    /**
+     * Runtime schema producing {@link Interface}.
+     *
+     * Both discriminants are validated rather than asserted. {@link Interface.type}
+     * selects which external fetcher runs, so an unrecognised value is a dispatch
+     * failure rather than a cosmetic one, and {@link Interface.status} gates
+     * whether the post is shown to end-users, so a value that is neither
+     * `removed` nor a known state fails open and displays content that was meant
+     * to be withdrawn.
+     *
+     * Unknown keys are preserved, matching the index signature inherited from
+     * {@link BaseFirestore}.
+     */
+    const Schema: z.ZodObject<{
+        account: z.ZodOptional<z.ZodString>;
+        service: z.ZodOptional<z.ZodString>;
+        source: z.ZodString;
+        status: z.ZodOptional<z.ZodEnum<typeof Status>>;
+        type: z.ZodEnum<typeof Type>;
+        uid: z.ZodOptional<z.ZodString>;
+        category: z.ZodOptional<z.ZodString>;
+        description: z.ZodOptional<z.ZodString>;
+        featured: z.ZodOptional<z.ZodBoolean>;
+        tags: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        hashtags: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        image: z.ZodOptional<z.ZodString>;
+        images: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        language: z.ZodOptional<z.ZodString>;
+        media: z.ZodOptional<z.ZodString>;
+        safe: z.ZodOptional<z.ZodBoolean>;
+        title: z.ZodOptional<z.ZodString>;
+        url: z.ZodOptional<z.ZodString>;
+        user: z.ZodOptional<z.ZodString>;
+        ml: z.ZodOptional<z.ZodBoolean>;
+        mlTitle: z.ZodOptional<z.ZodString>;
+        mlDescription: z.ZodOptional<z.ZodString>;
+        mlHashtags: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        mlImage: z.ZodOptional<z.ZodString>;
+        fetched: z.ZodOptional<z.ZodBoolean>;
+        views: z.ZodOptional<z.ZodNumber>;
+        likes: z.ZodOptional<z.ZodNumber>;
+        id: z.ZodOptional<z.ZodString>;
+        backup: z.ZodOptional<z.ZodBoolean>;
+        created: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+        updated: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+        expiry: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+    }, z.core.$loose>;
+    /**
+     * Compile-time proof that {@link Schema} produces {@link Interface}.
+     */
+    type SchemaOutput = AssertSchemaOutput<z.infer<typeof Schema>, Interface>;
+    /**
+     * Validates untrusted data as a post document without throwing.
+     *
+     * @param {unknown} value - Untrusted value, typically the raw data of a stored post document.
+     * @return {ParseResult<Interface>} Success carrying the typed post, or failure carrying the reasons.
+     */
+    const safeParse: (value: unknown) => ParseResult<Interface>;
+    /**
+     * Validates untrusted data as a post document, throwing when it does not
+     * conform.
+     *
+     * @param {unknown} value - Untrusted value, typically the raw data of a stored post document.
+     * @return {Interface} The validated post document.
+     * @throws {ParseError} When the value does not conform to {@link Schema}.
+     */
+    const parse: (value: unknown) => Interface;
 }

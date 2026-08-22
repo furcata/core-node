@@ -2,6 +2,8 @@
  * @license
  * Copyright Furcata. All Rights Reserved.
  */
+import { z } from "zod";
+import { AssertSchemaOutput, ParseResult } from "../interface/schema.js";
 /**
  * Namespace for content-block primitives used to compose rich-media sections
  * within {@link EventData.Interface} and other structured content documents.
@@ -68,4 +70,44 @@ export declare namespace Block {
          */
         height?: number;
     }
+    /**
+     * Runtime schema producing {@link Interface}.
+     *
+     * A block is the one shape in this package whose `type` is genuinely a
+     * dispatch discriminant: the renderer selects a component from it. Asserting
+     * an unrecognised value into {@link Type} therefore does not produce a
+     * mislabelled block, it produces a dispatch with no matching branch, so the
+     * value is validated against the enum here instead.
+     *
+     * Unknown keys are preserved rather than dropped, so a block written by a
+     * newer renderer survives a round-trip through an older consumer with its
+     * extra fields intact.
+     */
+    const Schema: z.ZodObject<{
+        type: z.ZodEnum<typeof Type>;
+        value: z.ZodCustom<string | number | Record<string, unknown> | unknown[], string | number | Record<string, unknown> | unknown[]>;
+        label: z.ZodString;
+        width: z.ZodOptional<z.ZodNumber>;
+        height: z.ZodOptional<z.ZodNumber>;
+    }, z.core.$loose>;
+    /**
+     * Compile-time proof that {@link Schema} produces {@link Interface}.
+     */
+    type SchemaOutput = AssertSchemaOutput<z.infer<typeof Schema>, Interface>;
+    /**
+     * Validates untrusted data as a content block without throwing.
+     *
+     * @param {unknown} value - Untrusted value, typically one element of a stored `blocks` array.
+     * @return {ParseResult<Interface>} Success carrying the typed block, or failure carrying the reasons.
+     */
+    const safeParse: (value: unknown) => ParseResult<Interface>;
+    /**
+     * Validates untrusted data as a content block, throwing when it does not
+     * conform.
+     *
+     * @param {unknown} value - Untrusted value, typically one element of a stored `blocks` array.
+     * @return {Interface} The validated block.
+     * @throws {ParseError} When the value does not conform to {@link Schema}.
+     */
+    const parse: (value: unknown) => Interface;
 }

@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { Block } from '../../src/model/Block.js';
+import { ParseError } from '../../src/interface/schema.js';
 
 describe('Block.Type', () => {
   describe('enum values', () => {
@@ -216,6 +217,113 @@ describe('Block.Interface', () => {
       expect(blocks[0].type).toBe('text');
       expect(blocks[1].type).toBe('image');
       expect(blocks[2].type).toBe('youtube');
+    });
+  });
+});
+
+/**
+ * A block that must parse.
+ */
+const validBlock = (): Record<string, unknown> => ({
+  type: Block.Type.text,
+  value: 'Synthetic body copy',
+  label: 'Intro',
+  width: 640,
+  height: 480,
+});
+
+describe('Block.Schema', () => {
+  describe('field inventory', () => {
+    it('should declare exactly the five fields of the interface and no audit fields', () => {
+      expect(Object.keys(Block.Schema.shape).sort()).toEqual(['height', 'label', 'type', 'value', 'width']);
+    });
+  });
+
+  describe('a valid block', () => {
+    it('should parse and return the typed block', () => {
+      const parsed = Block.parse(validBlock());
+      expect(parsed.type).toBe(Block.Type.text);
+      expect(parsed.value).toBe('Synthetic body copy');
+      expect(parsed.width).toBe(640);
+    });
+
+    it('should accept every declared block type', () => {
+      for (const type of Object.values(Block.Type)) {
+        expect(Block.safeParse({ ...validBlock(), type }).success).toBe(true);
+      }
+    });
+  });
+
+  describe('enum rejection', () => {
+    it('should reject a type that is not a declared member, which would dispatch to no renderer', () => {
+      const result = Block.safeParse({ ...validBlock(), type: 'carousel' });
+      expect(result.success).toBe(false);
+      expect(result.issues?.some((issue) => issue.path === 'type')).toBe(true);
+    });
+
+    it('should reject plausible-looking but undeclared types', () => {
+      for (const type of ['Image', 'IMAGE', 'images', 'youtube_video', '']) {
+        expect(Block.safeParse({ ...validBlock(), type }).success).toBe(false);
+      }
+    });
+  });
+
+  describe('missing required fields', () => {
+    it.each(['type', 'value', 'label'])('should reject a block with no %s', (field) => {
+      const block = validBlock();
+      delete block[field];
+      const result = Block.safeParse(block);
+      expect(result.success).toBe(false);
+      expect(result.issues?.some((issue) => issue.path === field)).toBe(true);
+    });
+
+    it('should accept an empty label, because a block with no caption is a legitimate choice', () => {
+      expect(Block.safeParse({ ...validBlock(), label: '' }).success).toBe(true);
+    });
+  });
+
+  describe('the value union', () => {
+    it('should accept each declared runtime shape', () => {
+      for (const value of ['text', 42, { latitude: 0, longitude: 0 }, ['a', 'b']]) {
+        expect(Block.safeParse({ ...validBlock(), value }).success).toBe(true);
+      }
+    });
+
+    it('should reject a value of an undeclared kind', () => {
+      for (const value of [true, null]) {
+        expect(Block.safeParse({ ...validBlock(), value }).success).toBe(false);
+      }
+    });
+
+    it('should return a value that is present, never undefined, on a successful parse', () => {
+      const parsed = Block.parse(validBlock());
+      expect(parsed.value).toBeDefined();
+      expect('value' in parsed).toBe(true);
+    });
+  });
+
+  describe('dimension hints', () => {
+    it('should reject a fractional or negative dimension', () => {
+      expect(Block.safeParse({ ...validBlock(), width: 1.5 }).success).toBe(false);
+      expect(Block.safeParse({ ...validBlock(), height: -1 }).success).toBe(false);
+    });
+
+    it('should reject a numeric string dimension rather than coercing it', () => {
+      expect(Block.safeParse({ ...validBlock(), width: '640' }).success).toBe(false);
+    });
+  });
+
+  describe('unknown-key policy', () => {
+    it('should preserve an undeclared field rather than dropping it', () => {
+      const parsed = Block.parse({ ...validBlock(), alt: 'kept' });
+      expect(parsed['alt']).toBe('kept');
+    });
+  });
+
+  describe('throwing form', () => {
+    it('should throw a ParseError naming the shape', () => {
+      expect(() => Block.parse({ type: Block.Type.text })).toThrow(ParseError);
+      expect(() => Block.parse({ type: Block.Type.text })).toThrow(/Block\.Interface failed validation/);
     });
   });
 });

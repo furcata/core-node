@@ -3,8 +3,10 @@
  * Copyright Furcata. All Rights Reserved.
  */
 import { User } from '@fabricelements/shared-helpers/user';
+import { z } from 'zod';
 import { BaseFirestore } from '../interface/base_db.js';
 import { MessageQueue } from '../interface/queue.js';
+import { AssertSchemaOutput, ParseResult } from '../interface/schema.js';
 /**
  * Namespace for account models representing business or government entities
  * registered on the Furcata platform.
@@ -503,4 +505,129 @@ export declare namespace Account {
          */
         bca?: string;
     }
+    /**
+     * Runtime schema producing {@link Interface}.
+     *
+     * This is the parse boundary for an account document, and it is where the
+     * compliance enums stop being a suggestion. Every one of the brand and
+     * campaign registration fields below is a closed set defined by a downstream
+     * provider API: asserting an unrecognised value into {@link BusinessIndustry}
+     * or {@link AppToPersonUseCase} with a cast does not produce a mislabelled
+     * account, it produces a registration submission that is rejected after the
+     * fact, by which point the failure is several systems away from the value that
+     * caused it.
+     *
+     * The queue counters are spread from `messageQueueShape` and the audit fields
+     * from `baseFirestoreShape`, so all three shapes stay validated identically
+     * everywhere rather than drifting between hand-written copies.
+     *
+     * Unknown keys are preserved, matching the `[x: string]: any` index signature
+     * inherited from {@link BaseFirestore}.
+     */
+    const Schema: z.ZodObject<{
+        language: z.ZodOptional<z.ZodString>;
+        image: z.ZodOptional<z.ZodString>;
+        imageURL: z.ZodOptional<z.ZodString>;
+        name: z.ZodOptional<z.ZodString>;
+        businessName: z.ZodOptional<z.ZodString>;
+        useName: z.ZodOptional<z.ZodString>;
+        description: z.ZodOptional<z.ZodString>;
+        status: z.ZodOptional<z.ZodEnum<typeof Status>>;
+        type: z.ZodOptional<z.ZodEnum<typeof Type>>;
+        uid: z.ZodOptional<z.ZodString>;
+        links: z.ZodOptional<z.ZodObject<{
+            behance: z.ZodOptional<z.ZodString>;
+            dribbble: z.ZodOptional<z.ZodString>;
+            facebook: z.ZodOptional<z.ZodString>;
+            instagram: z.ZodOptional<z.ZodString>;
+            linkedin: z.ZodOptional<z.ZodString>;
+            tiktok: z.ZodOptional<z.ZodString>;
+            x: z.ZodOptional<z.ZodString>;
+            youtube: z.ZodOptional<z.ZodString>;
+            website: z.ZodOptional<z.ZodString>;
+        }, z.core.$loose>>;
+        companyType: z.ZodOptional<z.ZodEnum<typeof CompanyType>>;
+        stockExchange: z.ZodOptional<z.ZodEnum<typeof StockExchange>>;
+        stockTicker: z.ZodOptional<z.ZodString>;
+        businessType: z.ZodOptional<z.ZodEnum<typeof BusinessType>>;
+        businessRegionsOfOperations: z.ZodOptional<z.ZodEnum<typeof BusinessRegionsOfOperations>>;
+        businessRegistrationIdentifier: z.ZodOptional<z.ZodEnum<typeof BusinessRegistrationIdentifier>>;
+        businessIndustry: z.ZodOptional<z.ZodEnum<typeof BusinessIndustry>>;
+        businessRegistrationNumber: z.ZodOptional<z.ZodString>;
+        authorizedRepresentative1: z.ZodOptional<z.ZodObject<{
+            firstName: z.ZodOptional<z.ZodString>;
+            lastName: z.ZodOptional<z.ZodString>;
+            email: z.ZodOptional<z.ZodString>;
+            phoneNumber: z.ZodOptional<z.ZodString>;
+            businessTitle: z.ZodOptional<z.ZodString>;
+            jobPosition: z.ZodOptional<z.ZodEnum<typeof AuthorizedRepresentativeJobPosition>>;
+        }, z.core.$loose>>;
+        authorizedRepresentative2: z.ZodOptional<z.ZodObject<{
+            firstName: z.ZodOptional<z.ZodString>;
+            lastName: z.ZodOptional<z.ZodString>;
+            email: z.ZodOptional<z.ZodString>;
+            phoneNumber: z.ZodOptional<z.ZodString>;
+            businessTitle: z.ZodOptional<z.ZodString>;
+            jobPosition: z.ZodOptional<z.ZodEnum<typeof AuthorizedRepresentativeJobPosition>>;
+        }, z.core.$loose>>;
+        estimatedVolume: z.ZodOptional<z.ZodNumber>;
+        brandType: z.ZodOptional<z.ZodEnum<typeof BrandType>>;
+        appToPersonUseCase: z.ZodOptional<z.ZodEnum<typeof AppToPersonUseCase>>;
+        tollFreeUseCase: z.ZodOptional<z.ZodString>;
+        useCaseDescription: z.ZodOptional<z.ZodString>;
+        useCaseDescriptionCTA: z.ZodOptional<z.ZodString>;
+        automaticHeader: z.ZodOptional<z.ZodBoolean>;
+        postalCode: z.ZodOptional<z.ZodString>;
+        area: z.ZodOptional<z.ZodString>;
+        city: z.ZodOptional<z.ZodString>;
+        street1: z.ZodOptional<z.ZodString>;
+        street2: z.ZodOptional<z.ZodString>;
+        country: z.ZodOptional<z.ZodString>;
+        utcOffset: z.ZodOptional<z.ZodInt>;
+        domain: z.ZodOptional<z.ZodString>;
+        domainOk: z.ZodOptional<z.ZodBoolean>;
+        domainTimestamp: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+        alias: z.ZodOptional<z.ZodString>;
+        sampleMessage1: z.ZodOptional<z.ZodString>;
+        sampleMessage2: z.ZodOptional<z.ZodString>;
+        sampleMessage3: z.ZodOptional<z.ZodString>;
+        sampleMessage4: z.ZodOptional<z.ZodString>;
+        sampleMessage5: z.ZodOptional<z.ZodString>;
+        bca: z.ZodOptional<z.ZodString>;
+        pending: z.ZodOptional<z.ZodNumber>;
+        ready: z.ZodOptional<z.ZodNumber>;
+        sender: z.ZodOptional<z.ZodNumber>;
+        sending: z.ZodOptional<z.ZodNumber>;
+        counted: z.ZodOptional<z.ZodUnknown>;
+        id: z.ZodOptional<z.ZodString>;
+        backup: z.ZodOptional<z.ZodBoolean>;
+        created: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+        updated: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+        expiry: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
+    }, z.core.$loose>;
+    /**
+     * Compile-time proof that {@link Schema} produces {@link Interface}.
+     *
+     * This also pins {@link Interface.links} against the shared-helpers
+     * `User.InterfaceLinks` definition: if that type gains or changes a field and
+     * `linksSchema` is not updated to match, the divergence is a build failure
+     * here rather than a field silently rejected at runtime.
+     */
+    type SchemaOutput = AssertSchemaOutput<z.infer<typeof Schema>, Interface>;
+    /**
+     * Validates untrusted data as an account document without throwing.
+     *
+     * @param {unknown} value - Untrusted value, typically the raw data of a stored account document.
+     * @return {ParseResult<Interface>} Success carrying the typed account, or failure carrying the reasons.
+     */
+    const safeParse: (value: unknown) => ParseResult<Interface>;
+    /**
+     * Validates untrusted data as an account document, throwing when it does not
+     * conform.
+     *
+     * @param {unknown} value - Untrusted value, typically the raw data of a stored account document.
+     * @return {Interface} The validated account document.
+     * @throws {ParseError} When the value does not conform to {@link Schema}.
+     */
+    const parse: (value: unknown) => Interface;
 }
