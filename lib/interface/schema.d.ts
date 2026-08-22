@@ -156,20 +156,30 @@ export interface ParseSuccess<T> {
 /**
  * Failed outcome of a parse.
  *
- * There is deliberately no `data` on this branch. A caller cannot reach a typed
- * document without first narrowing on `success`, which is the property that
- * makes validation unskippable rather than merely available.
+ * There is deliberately **no `data` property on this branch at all** — not even
+ * an optional `data?: undefined`. That distinction is load-bearing rather than
+ * stylistic, and it was measured rather than assumed.
+ *
+ * With `strictNullChecks: false`, which both this package and its consumers
+ * compile under, `undefined` is assignable to every type. So a sibling marker of
+ * the form `data?: undefined` **collapses**, and `result.data.amount` on an
+ * un-narrowed {@link ParseResult} compiles cleanly and throws `TypeError` at
+ * runtime. Omitting the property entirely produces `Property 'data' does not
+ * exist on type 'ParseFailure'` regardless of the null-checking setting, which
+ * is the only form of the guarantee that actually fires here.
+ *
+ * The asymmetry with {@link ParseSuccess} is deliberate. Reading `.issues` off a
+ * success yields `undefined` where a caller expected none to exist — wrong, but
+ * benign, and convenient when logging an un-narrowed result. Reading `.data` off
+ * a failure yields an absent value typed as a valid document, which is the exact
+ * defect this whole module exists to prevent. Only the dangerous direction is
+ * closed.
  */
 export interface ParseFailure {
     /**
      * Discriminant. Always `false` on this branch.
      */
     success: false;
-    /**
-     * Always absent on failure, so an unvalidated document can never be read out
-     * of a failed result.
-     */
-    data?: undefined;
     /**
      * Every reason the document was rejected, not just the first.
      */
@@ -474,3 +484,105 @@ export declare const auditTimestamp: () => z.ZodType<TimestampLike | Date | stri
  * @return {z.ZodOptional<z.ZodUnknown>} Schema accepting any value, including absence.
  */
 export declare const openValue: () => z.ZodOptional<z.ZodUnknown>;
+/**
+ * Successful narrowing of an untrusted value to a member of a caller-owned
+ * enumeration.
+ *
+ * @template TMember The enumeration's member type.
+ */
+export interface MemberMatch<TMember extends string> {
+    /**
+     * Discriminant. Always `true` on this branch.
+     */
+    matched: true;
+    /**
+     * The value, now typed as a member of the enumeration.
+     */
+    member: TMember;
+}
+/**
+ * Failed narrowing: the value is not a member of the enumeration.
+ *
+ * There is deliberately **no `member` property on this branch at all**, for the
+ * same measured reason as {@link ParseFailure}: under `strictNullChecks: false`
+ * a sibling `member?: undefined` marker collapses, and reading `.member` off an
+ * un-narrowed result would compile cleanly. Omitting it makes the unhandled case
+ * a compile error regardless of the null-checking setting.
+ */
+export interface MemberMiss {
+    /**
+     * Discriminant. Always `false` on this branch.
+     */
+    matched: false;
+    /**
+     * The value that failed to match, carried so a caller can distinguish the
+     * cases that {@link matchMember} deliberately does not distinguish for them.
+     *
+     * `undefined` means the field was absent, `null` means it was explicitly null,
+     * and anything else is a value that was present but is not a member. All three
+     * are misses; which of them warrants an error is the caller's policy, not this
+     * function's.
+     */
+    value: unknown;
+}
+/**
+ * Result of narrowing an untrusted value to a member of an enumeration.
+ *
+ * @template TMember The enumeration's member type.
+ */
+export type MemberResult<TMember extends string> = MemberMatch<TMember> | MemberMiss;
+/**
+ * Narrows an untrusted value to a member of a caller-owned enumeration.
+ *
+ * ## Why this exists
+ *
+ * Some fields in this package are deliberately typed `string` rather than an
+ * enum, because the vocabulary is owned by the service that writes them and a
+ * partial copy here would reject legitimate records. That is the correct
+ * layering — this package validates *shape*, the vocabulary's owner validates
+ * *membership* — but on its own it only **moves** the cast rather than removing
+ * it: a caller still writes `parsed.service as Service`, which checks nothing.
+ *
+ * This closes that. The cast is written once, here, inside a guard that has
+ * actually checked, instead of once per call site inside nothing. And because
+ * the miss branch carries no `member` property, a caller that ignores the failure
+ * gets a compile error rather than a silent misroute — the mistake is
+ * unrepresentable rather than merely discouraged.
+ *
+ * ## What counts as a miss
+ *
+ * Everything that is not exactly one of the enumeration's values: a non-string,
+ * `null`, `undefined`, the empty string (unless the enumeration declares an
+ * empty member, which none should), and any string with different casing or
+ * surrounding whitespace. No normalisation is performed, because normalising
+ * would mean guessing which near-miss the writer intended.
+ *
+ * Absence and invalidity are both misses. They are **distinguishable** through
+ * {@link MemberMiss.value}, so a caller for whom an absent field is acceptable
+ * but a wrong one is not can tell them apart; the function does not decide that
+ * policy on the caller's behalf.
+ *
+ * @template TEnum The enumeration object, typically `typeof SomeEnum`.
+ * @param {TEnum} members - The enumeration to narrow against.
+ * @param {unknown} value - Untrusted value, typically a field of an already-parsed document.
+ * @return {MemberResult<TEnum[keyof TEnum]>} A match carrying the typed member, or a miss carrying the offending value.
+ */
+export declare const matchMember: <TEnum extends Record<string, string>>(members: TEnum, value: unknown) => MemberResult<TEnum[keyof TEnum]>;
+/**
+ * Narrows an untrusted value to a member of an enumeration, throwing when it is
+ * not one.
+ *
+ * The throwing counterpart to {@link matchMember}, mirroring the relationship
+ * between {@link parseOrThrow} and {@link parseResult}. Use it where continuing
+ * with an unrecognised value is never the right outcome, so the failure surfaces
+ * at the boundary the value entered rather than as a dispatch with no matching
+ * branch several layers later.
+ *
+ * @template TEnum The enumeration object, typically `typeof SomeEnum`.
+ * @param {TEnum} members - The enumeration to narrow against.
+ * @param {unknown} value - Untrusted value, typically a field of an already-parsed document.
+ * @param {string} label - Name of the field being narrowed, used in the thrown message.
+ * @return {TEnum[keyof TEnum]} The value, typed as a member of the enumeration.
+ * @throws {ParseError} When the value is not a member.
+ */
+export declare const requireMember: <TEnum extends Record<string, string>>(members: TEnum, value: unknown, label: string) => TEnum[keyof TEnum];
