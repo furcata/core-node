@@ -173,13 +173,17 @@ export interface ParseSuccess<T> {
  * an optional `data?: undefined`. That distinction is load-bearing rather than
  * stylistic, and it was measured rather than assumed.
  *
- * With `strictNullChecks: false`, which both this package and its consumers
- * compile under, `undefined` is assignable to every type. So a sibling marker of
- * the form `data?: undefined` **collapses**, and `result.data.amount` on an
- * un-narrowed {@link ParseResult} compiles cleanly and throws `TypeError` at
- * runtime. Omitting the property entirely produces `Property 'data' does not
- * exist on type 'ParseFailure'` regardless of the null-checking setting, which
- * is the only form of the guarantee that actually fires here.
+ * A sibling marker of the form `data?: undefined` **collapses** wherever
+ * `strictNullChecks` is off, because `T | undefined` reduces to `T` under that
+ * setting — so `result.data.amount` on an un-narrowed {@link ParseResult}
+ * compiles cleanly and throws `TypeError` at runtime. This package now compiles
+ * with `strictNullChecks` on, so the marker form would look correct here while
+ * protecting nothing for a consumer who leaves it off. Omitting the property
+ * entirely produces `Property 'data' does not exist on type 'ParseFailure'`
+ * regardless of the null-checking setting, which is the only form of the
+ * guarantee that fires either way. `npm run typecheck:consumer` compiles this
+ * package's built declarations under the permissive setting and is what keeps
+ * that true.
  *
  * The asymmetry with {@link ParseSuccess} is deliberate. Reading `.issues` off a
  * success yields `undefined` where a caller expected none to exist — wrong, but
@@ -187,6 +191,15 @@ export interface ParseSuccess<T> {
  * a failure yields an absent value typed as a valid document, which is the exact
  * defect this whole module exists to prevent. Only the dangerous direction is
  * closed.
+ *
+ * One consumer-visible caveat, measured rather than assumed: where
+ * `strictNullChecks` is off, **negative** narrowing of a boolean discriminant
+ * does not fire, because every type includes `undefined` there and so the
+ * success branch cannot be excluded by a falsy test. `r.success ? … : r.issues`
+ * and `if (r.success) {} else { … }` both leave the value un-narrowed for such a
+ * consumer. `r.success === false`, `r.success === true` and the `in` operator
+ * narrow under both settings; prefer the explicit comparison in code meant to be
+ * portable across consumers.
  */
 export interface ParseFailure {
   /**
@@ -612,10 +625,18 @@ export interface MemberMatch<TMember extends string> {
  * Failed narrowing: the value is not a member of the enumeration.
  *
  * There is deliberately **no `member` property on this branch at all**, for the
- * same measured reason as {@link ParseFailure}: under `strictNullChecks: false`
- * a sibling `member?: undefined` marker collapses, and reading `.member` off an
- * un-narrowed result would compile cleanly. Omitting it makes the unhandled case
- * a compile error regardless of the null-checking setting.
+ * same measured reason as {@link ParseFailure}: wherever `strictNullChecks` is
+ * off a sibling `member?: undefined` marker collapses, and reading `.member` off
+ * an un-narrowed result would compile cleanly. Omitting it makes the unhandled
+ * case a compile error regardless of the null-checking setting, which
+ * `npm run typecheck:consumer` verifies against the built declarations.
+ *
+ * Reaching {@link MemberMiss.value} needs the explicit form. Unlike
+ * {@link ParseSuccess}, {@link MemberMatch} declares no mirroring
+ * `value?: undefined`, so there is no second route to the property when negative
+ * narrowing does not fire — and it does not fire for a consumer with
+ * `strictNullChecks` off. Write `result.matched === false`, not
+ * `!result.matched` and not the `else` of `if (result.matched)`.
  */
 export interface MemberMiss {
   /**

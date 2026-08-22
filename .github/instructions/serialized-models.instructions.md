@@ -126,3 +126,51 @@ Schemas are the intended resolution to §3 and §4, so they will arrive. When th
   passes review and never runs.**
 - Test the rejection path, not only the happy path, and positive-control it: a schema test that
   only asserts a valid object parses passes identically whether the schema is strict or wide open.
+
+---
+
+## 8. A type-level guarantee must not depend on a compiler flag the consumer might not set
+
+This package compiles with `strict`, `strictNullChecks` and `noImplicitAny` all on. **Consumers
+need not**, and the same declaration can enforce something here and enforce nothing for them.
+
+The canonical pair — identical in intent, not in effect:
+
+```ts
+// ❌ Rests on NULL-CHECKING. Inert wherever strictNullChecks is off:
+//    `T | undefined` reduces to `T`, the marker vanishes, and the unguarded
+//    read compiles clean and throws at runtime.
+interface Failure { success: false; data?: undefined }
+
+// ✅ Rests on PROPERTY EXISTENCE. `Property 'data' does not exist` fires
+//    under every setting.
+interface Failure { success: false }
+```
+
+**Prefer the construction that holds either way.** Omitting a property beats marking it
+`?: undefined`; a required discriminant beats an optional one; `unknown` beats `any` regardless of
+flags. When you must depend on a flag, say so in the JSDoc so the next reader knows the guarantee
+has a precondition they do not control.
+
+The trap is not the rule, it is that **nothing in a strict repository can show you the difference**.
+The strict gate passes identically for both shapes above, so the precondition — "the consumer
+shares our settings" — stays unspoken until it silently stops being true.
+
+`npm run typecheck:consumer` is what closes that. It compiles fixtures in `test-consumer/` against
+the **built `lib/*.d.ts`**, reached through the package's own `exports` map, with `strictNullChecks`
+and `noImplicitAny` **off**. Add a case there whenever you add a type-level guarantee:
+
+- express the negative with `@ts-expect-error` **plus a description** — if the guarantee breaks, the
+  expected error stops occurring, the directive goes unused, and the compile fails with `TS2578`;
+- pair it with the narrowed positive, so a type that is merely unusable cannot satisfy the negative;
+- keep the inert same-shape control that carries no directive and must compile clean. It is the
+  proof the settings are genuinely permissive, and it makes the config self-pinning: restore
+  strictness and the control errors rather than quietly turning the gate into a copy of the strict
+  one.
+
+One consumer-visible consequence worth knowing, measured rather than assumed: where
+`strictNullChecks` is off, **negative narrowing of a boolean discriminant does not fire** — every
+type includes `undefined` there, so the truthy branch cannot be excluded. `r.ok ? … : r.err` and
+`if (r.ok) {} else { … }` leave the value un-narrowed for such a consumer; `r.ok === false`,
+`r.ok === true` and `in` narrow under both settings. Design discriminated results so the failure
+branch is reachable with the explicit comparison, and say so in the JSDoc.

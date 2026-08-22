@@ -1,0 +1,59 @@
+{
+  // Consumer-conditions type gate.
+  //
+  // This project deliberately does NOT extend ./tsconfig.json. It is not a
+  // variant of this package's own build; it is a stand-in for a CONSUMER's
+  // compiler, and a consumer inherits nothing from this file. Extending the
+  // strict base and switching two flags back off would leave every other
+  // strictness option silently coupled to ours, which is the coupling this
+  // gate exists to break.
+  //
+  // Two properties are load-bearing:
+  //
+  //   1. It compiles the fixtures in `test-consumer/` against the BUILT
+  //      `lib/*.d.ts` — reached through the package's own `exports` map by
+  //      self-name import — not against `src/`. The declarations are what a
+  //      consumer actually receives; `src/` is not shipped as the type entry.
+  //
+  //   2. `strictNullChecks` and `noImplicitAny` are OFF. This package compiles
+  //      with both ON, so its own gates can never observe how its published
+  //      types behave for a consumer that leaves them off — and a type-level
+  //      guarantee can hold under one setting and be completely inert under
+  //      the other. See test-consumer/interface/schema.consumer-types.ts.
+  //
+  // `skipLibCheck` suppresses errors reported INSIDE .d.ts files only; errors
+  // in the fixtures that USE those declarations are still reported, which is
+  // what this gate asserts on. It is on because a permissive consumer's own
+  // dependency declarations are not this package's contract to police.
+  "compilerOptions": {
+    "lib": [
+      "ES2020"
+    ],
+    "target": "ES2020",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "strict": false,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": [
+      "node"
+    ],
+    "typeRoots": [
+      "node_modules/@types"
+    ]
+  },
+  "include": [
+    "test-consumer"
+  ],
+  "exclude": [
+    "node_modules",
+    "src",
+    "test",
+    "lib"
+  ]
+}

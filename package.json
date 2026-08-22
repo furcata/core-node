@@ -41,6 +41,7 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc -p ./tsconfig.test.json",
+    "typecheck:consumer": "tsc -p ./tsconfig.consumer.json",
     "build": "npm run clear && npm run lint && npm run compile",
     "build:watch": "npm run clear && npm run lint && npm run compile:watch",
     "clear": "rm -rf ./lib",

@@ -107,3 +107,32 @@ jobs:
         run: npm run typecheck
         env:
           CI: true
+
+      # Neither gate above can observe how these types behave for a consumer
+      # that compiles more permissively than this package does. `npm run
+      # typecheck` uses this repository's own settings, where `strict`,
+      # `strictNullChecks` and `noImplicitAny` are all on; a consumer need not
+      # set any of them. A type-level guarantee can hold under one
+      # null-checking setting and be completely inert under the other — a
+      # failure branch marked `data?: undefined` errors correctly here and
+      # compiles clean for a consumer with `strictNullChecks` off, because
+      # `T | undefined` reduces to `T` when the flag is off. The unspoken
+      # precondition of the strict gate is that the consumer shares our
+      # settings, and nothing tracked it.
+      #
+      # This step compiles fixtures against the BUILT `lib/*.d.ts` — reached
+      # through the package's own `exports` map, so it type-checks the
+      # declarations consumers actually receive rather than `src/` — with
+      # `strictNullChecks` and `noImplicitAny` off. It runs after the build and
+      # the drift check deliberately: the declarations it reads are only
+      # current because those two steps already passed.
+      #
+      # Positive-controlled, not assumed. Reintroducing `data?: undefined` on
+      # the failure branch, rebuilding, and re-running both gates turns THIS
+      # step red (TS2578, the expected error stopped occurring) while
+      # `npm run typecheck` stays green — which is the entire point, since a
+      # gate that never disagrees with an existing one adds nothing.
+      - name: Typecheck (published declarations under consumer conditions)
+        run: npm run typecheck:consumer
+        env:
+          CI: true

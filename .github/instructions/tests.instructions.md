@@ -1,6 +1,6 @@
 ---
 description: Vitest conventions, positive controls, and the limits of a runtime suite over erased types.
-applyTo: "test/**/*.ts,vitest.config.ts,tsconfig.test.json"
+applyTo: "test/**/*.ts,test-consumer/**/*.ts,vitest.config.ts,tsconfig.test.json,tsconfig.consumer.json"
 ---
 
 # Testing Instructions — `@furcata/core-node`
@@ -54,11 +54,16 @@ member's value produced **3 failed, exit 1**.
 | Watch | `npx vitest` |
 | Coverage | `npx vitest run --coverage` |
 | **Type-level check (required)** | `npm run typecheck` → `tsc -p ./tsconfig.test.json` |
+| **Consumer-conditions check (required)** | `npm run typecheck:consumer` → `tsc -p ./tsconfig.consumer.json` |
 
 > ⚠️ `npx vitest run --typecheck` is **not** the type gate. Vitest's `typecheck.include` defaults
 > to `**/*.test-d.ts`, and this repository has no such files, so it type-checks **zero files** and
 > reports "no errors" no matter what is broken. Verified: with an interface field deleted it still
 > reported `Type Errors  no errors` and exited `0`. Use `npm run typecheck`.
+
+> ⚠️ `npm run typecheck:consumer` reads the **built** `lib/*.d.ts`, so run `npm run build` first.
+> Against a stale `lib/` it reports on declarations that no longer match `src/`. CI orders it after
+> the build and the drift check for exactly that reason.
 
 ---
 
@@ -123,3 +128,43 @@ When the thing under test is a type, assert against something with runtime exist
   asserting only the happy path is vacuous in the most dangerous way: it passes identically whether
   the schema is strict or wide open. Always include the rejection case, and positive-control it by
   confirming the valid case still parses.
+
+---
+
+## 6. The third gate: `test-consumer/`
+
+`npm test` proves runtime values. `npm run typecheck` proves the shapes **under this package's own
+compiler settings**. Neither can see how a published declaration behaves for a consumer who
+compiles more permissively — and a type-level guarantee can hold under one null-checking setting
+and be completely inert under the other.
+
+`test-consumer/` closes that. It is not a Vitest suite and it is never executed: the compile *is*
+the test. `tsconfig.consumer.json` compiles it against the **built `lib/*.d.ts`**, reached through
+the package's own `exports` map, with `strictNullChecks` and `noImplicitAny` **off**.
+
+Conventions, which differ from `test/`:
+
+- **Mirror the source path** as elsewhere: `src/interface/schema.ts` →
+  `test-consumer/interface/schema.consumer-types.ts`. The `.consumer-types.ts` suffix keeps the
+  files out of Vitest's collection globs.
+- **Import by package name**, not by relative path:
+  `import {type ParseResult} from '@furcata/core-node/interface';`. The self-name import resolves
+  through `exports` to the shipped declaration. A relative import of `src/` would test a file
+  consumers never receive. Verified with `tsc --listFiles`: only `lib/interface/*.d.ts` and the
+  fixture are compiled, no file from `src/`.
+- **Negative cases use `@ts-expect-error` with a description.** That makes them self-proving — if
+  the guarantee breaks the expected error disappears, the directive goes unused, and `tsc` fails
+  with `TS2578`. It fails when the guarantee breaks *and* when it stops being tested.
+- **Every negative is paired with a narrowed positive**, so a type that is merely unusable cannot
+  satisfy the negative.
+- **Keep the inert same-shape controls.** They carry no directive and must compile clean; they are
+  the proof the settings are genuinely permissive, and they make the config self-pinning.
+- **Fixtures must be obviously synthetic.** This repository is public.
+
+Mutation-validated, as §4 requires: reintroducing `data?: undefined` on the parse failure branch,
+rebuilding, and re-running both gates turns `npm run typecheck:consumer` **red** (`TS2578`) while
+`npm run typecheck` stays **green**. That divergence is the reason the gate exists — a gate that
+never disagrees with an existing one is not adding a check, it is adding a duplicate.
+
+The rule this enforces is in
+[`serialized-models.instructions.md`](serialized-models.instructions.md) §8.
