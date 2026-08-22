@@ -169,20 +169,30 @@ export interface ParseSuccess<T> {
 /**
  * Failed outcome of a parse.
  *
- * There is deliberately no `data` on this branch. A caller cannot reach a typed
- * document without first narrowing on `success`, which is the property that
- * makes validation unskippable rather than merely available.
+ * There is deliberately **no `data` property on this branch at all** — not even
+ * an optional `data?: undefined`. That distinction is load-bearing rather than
+ * stylistic, and it was measured rather than assumed.
+ *
+ * With `strictNullChecks: false`, which both this package and its consumers
+ * compile under, `undefined` is assignable to every type. So a sibling marker of
+ * the form `data?: undefined` **collapses**, and `result.data.amount` on an
+ * un-narrowed {@link ParseResult} compiles cleanly and throws `TypeError` at
+ * runtime. Omitting the property entirely produces `Property 'data' does not
+ * exist on type 'ParseFailure'` regardless of the null-checking setting, which
+ * is the only form of the guarantee that actually fires here.
+ *
+ * The asymmetry with {@link ParseSuccess} is deliberate. Reading `.issues` off a
+ * success yields `undefined` where a caller expected none to exist — wrong, but
+ * benign, and convenient when logging an un-narrowed result. Reading `.data` off
+ * a failure yields an absent value typed as a valid document, which is the exact
+ * defect this whole module exists to prevent. Only the dangerous direction is
+ * closed.
  */
 export interface ParseFailure {
   /**
    * Discriminant. Always `false` on this branch.
    */
   success: false;
-  /**
-   * Always absent on failure, so an unvalidated document can never be read out
-   * of a failed result.
-   */
-  data?: undefined;
   /**
    * Every reason the document was rejected, not just the first.
    */

@@ -300,14 +300,15 @@ describe('parse plumbing', () => {
     it('should return a success branch carrying the data', () => {
       const result = parseResult(schema, {account: 'acc_synthetic', amount: 100}, 'Fixture');
       expect(result.success).toBe(true);
-      expect(result.data).toEqual({account: 'acc_synthetic', amount: 100});
+      // Narrowing on `success` is the only route to the document, by construction.
+      expect(result.success && result.data).toEqual({account: 'acc_synthetic', amount: 100});
       expect(result.issues).toBeUndefined();
     });
 
     it('should return a failure branch with no data at all', () => {
       const result = parseResult(schema, {amount: 100}, 'Fixture');
       expect(result.success).toBe(false);
-      expect(result.data).toBeUndefined();
+      expect(result.success ? result.data : undefined).toBeUndefined();
     });
 
     it('should report every reason, not only the first', () => {
@@ -361,7 +362,7 @@ describe('parse plumbing', () => {
     it('should preserve an unknown key rather than dropping it', () => {
       const result = parseResult(schema, {account: 'acc_synthetic', legacyField: 'kept'}, 'Fixture');
       expect(result.success).toBe(true);
-      expect(result.data?.['legacyField']).toBe('kept');
+      expect(result.success && result.data['legacyField']).toBe('kept');
     });
 
     it('should demonstrate the contrast with a stripping schema, which deletes it silently', () => {
@@ -373,7 +374,7 @@ describe('parse plumbing', () => {
     it('should preserve a nested unknown value by reference', () => {
       const nested = {deep: true};
       const result = parseResult(schema, {account: 'acc_synthetic', extra: nested}, 'Fixture');
-      expect(result.data?.['extra']).toBe(nested);
+      expect(result.success && result.data['extra']).toBe(nested);
     });
   });
 });
@@ -620,8 +621,39 @@ describe('null and optionality policy', () => {
     it('should distinguish a null nullable field from an absent one after parsing', () => {
       const withNull = Ledger.safeParse({service: 's', scope: 'sc', amount: 1, limit: null});
       const withoutLimit = Ledger.safeParse({service: 's', scope: 'sc', amount: 1});
-      expect(withNull.data?.limit).toBeNull();
-      expect(withoutLimit.data && 'limit' in withoutLimit.data).toBe(false);
+      expect(withNull.success && withNull.data.limit).toBeNull();
+      expect(withoutLimit.success && 'limit' in withoutLimit.data).toBe(false);
     });
+  });
+});
+
+/**
+ * Compile-time guarantee, asserted with `@ts-expect-error`.
+ *
+ * This is the whole value of omitting `data` from {@link ParseFailure}, and it is
+ * otherwise untestable: a runtime assertion cannot observe a type. The directive
+ * asserts that the line under it **is** a compile error, so if the error ever
+ * stops occurring — for example because someone re-adds a `data?: undefined`
+ * sibling marker — the unused directive becomes an error itself and
+ * `npm run typecheck` goes red.
+ *
+ * That inversion is what makes this a regression guard rather than a comment. It
+ * runs under the existing `npm run typecheck` gate, which includes `test/`, so no
+ * new tooling is involved. `npm test` cannot see it at all, which is the point.
+ */
+describe('compile-time guarantees', () => {
+  it('should make an un-narrowed data access a compile error', () => {
+    const result = Ledger.safeParse({service: 's', scope: 'sc', amount: 'abc'});
+    // @ts-expect-error data is absent from the failure branch, so reading it without narrowing on success must not compile.
+    const unguarded = result.data;
+    expect(unguarded).toBeUndefined();
+    // The guarded form compiles and is the only way to reach the document.
+    expect(result.success ? result.data : undefined).toBeUndefined();
+  });
+
+  it('should still allow inspecting issues on an un-narrowed result, the benign direction', () => {
+    const result = Ledger.safeParse({service: 's', scope: 'sc', amount: 'abc'});
+    expect(result.issues?.length).toBeGreaterThan(0);
+    expect(result.message).toContain('Ledger.Interface');
   });
 });
