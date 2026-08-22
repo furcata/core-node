@@ -154,7 +154,7 @@ export declare namespace Idempotency {
         progress: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         response: z.ZodOptional<z.ZodObject<{
             status: z.ZodInt;
-            body: z.ZodCustom<string | null, string | null>;
+            body: z.ZodNullable<z.ZodString>;
             truncated: z.ZodBoolean;
         }, z.core.$loose>>;
         lockExpires: z.ZodOptional<z.ZodType<TimestampLike, TimestampLike, z.core.$ZodTypeInternals<TimestampLike, TimestampLike>>>;

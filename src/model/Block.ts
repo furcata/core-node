@@ -11,7 +11,6 @@ import {
   ParseResult,
   parseOrThrow,
   parseResult,
-  requiredKey,
 } from "../interface/schema.js";
 
 /**
@@ -87,7 +86,7 @@ export namespace Block {
    * schema so it is the single source of truth for both the validation and the
    * inferred output type of the `value` field below.
    */
-  const blockValueSchema = z.union([z.string(), z.number(), z.record(z.string(), z.unknown()), z.array(z.unknown())]);
+  const blockValueSchema = z.union([z.string(), z.number(), z.record(z.string(), z.unknown()), z.array(z.unknown())], {error: 'Expected a string, number, object or array block value'});
 
   /**
    * Runtime schema producing {@link Interface}.
@@ -113,16 +112,12 @@ export namespace Block {
      * {@link Interface.type}, and that correspondence is the renderer's to
      * enforce rather than this schema's.
      *
-     * Wrapped in `requiredKey` because this key is required and its schema is a
-     * `z.union`, which zod inferred as an optional key under the
-     * `strictNullChecks: false` setting this package previously used. Without
-     * the wrapper {@link parse} would have returned a type claiming `value` may
-     * be absent when at runtime it never is. `strictNullChecks` is now enabled
-     * and the inference is correct without the wrapper, which is retained here
-     * only so that removing it is a deliberate change with its own tests rather
-     * than a side effect of a compiler-flag change; see `requiredKey`.
+     * Carries an explicit `error` message on the union itself, because zod
+     * reports a failed union as the unhelpful `Invalid input` — it cannot know
+     * which member the caller intended. Naming the accepted shapes is the
+     * difference between a caller seeing what to send and seeing nothing.
      */
-    value: requiredKey(blockValueSchema, 'Expected a string, number, object or array block value'),
+    value: blockValueSchema,
     /**
      * See {@link Interface.label}. Required but permitted to be empty, because
      * a block with no caption is a legitimate authoring choice.

@@ -200,7 +200,7 @@ export declare namespace EventData {
         uid: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         blocks: z.ZodOptional<z.ZodArray<z.ZodObject<{
             type: z.ZodEnum<typeof Block.Type>;
-            value: z.ZodCustom<string | number | Record<string, unknown> | unknown[], string | number | Record<string, unknown> | unknown[]>;
+            value: z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodArray<z.ZodUnknown>]>;
             label: z.ZodString;
             width: z.ZodOptional<z.ZodNumber>;
             height: z.ZodOptional<z.ZodNumber>;
