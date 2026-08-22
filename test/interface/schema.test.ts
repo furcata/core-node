@@ -13,12 +13,14 @@ import {
   epochSeconds,
   finiteNumber,
   isTimestampLike,
+  matchMember,
   nonEmptyString,
   nonNegativeNumber,
   openValue,
   ParseError,
   parseOrThrow,
   parseResult,
+  requireMember,
   requiredKey,
   timestampLike,
   token,
@@ -628,18 +630,122 @@ describe('null and optionality policy', () => {
 });
 
 /**
- * Compile-time guarantee, asserted with `@ts-expect-error`.
+ * A caller-owned enumeration, standing in for a vocabulary this package
+ * deliberately does not declare. Declared here so the suite depends on no
+ * external vocabulary.
+ */
+enum LocalService {
+  alpha = 'alpha',
+  beta = 'beta',
+}
+
+describe('member narrowing', () => {
+  describe('matchMember', () => {
+    it('should match a declared member and carry it typed', () => {
+      const result = matchMember(LocalService, 'alpha');
+      expect(result.matched).toBe(true);
+      expect(result.matched && result.member).toBe(LocalService.alpha);
+    });
+
+    it('should match every declared member', () => {
+      for (const member of Object.values(LocalService)) {
+        expect(matchMember(LocalService, member).matched).toBe(true);
+      }
+    });
+
+    it('should miss a string that is not a member', () => {
+      const result = matchMember(LocalService, 'gamma');
+      expect(result.matched).toBe(false);
+      expect(result.matched === false && result.value).toBe('gamma');
+    });
+
+    it('should miss on casing or whitespace rather than normalising', () => {
+      for (const candidate of ['Alpha', 'ALPHA', ' alpha', 'alpha ']) {
+        expect(matchMember(LocalService, candidate).matched).toBe(false);
+      }
+    });
+
+    it('should miss the empty string', () => {
+      const result = matchMember(LocalService, '');
+      expect(result.matched).toBe(false);
+      expect(result.matched === false && result.value).toBe('');
+    });
+
+    it('should miss null and undefined, carrying each so absence stays distinguishable from invalidity', () => {
+      const absent = matchMember(LocalService, undefined);
+      const explicitNull = matchMember(LocalService, null);
+      const wrong = matchMember(LocalService, 'gamma');
+      expect([absent.matched, explicitNull.matched, wrong.matched]).toEqual([false, false, false]);
+      expect(absent.matched === false && absent.value).toBeUndefined();
+      expect(explicitNull.matched === false && explicitNull.value).toBeNull();
+      expect(wrong.matched === false && wrong.value).toBe('gamma');
+    });
+
+    it('should miss a non-string of any kind', () => {
+      for (const candidate of [1, true, {member: 'alpha'}, ['alpha']]) {
+        expect(matchMember(LocalService, candidate).matched).toBe(false);
+      }
+    });
+
+    it('should compose with a parsed document, which is the intended call shape', () => {
+      const record = Ledger.parse({service: 'alpha', scope: 'scope_synthetic', amount: 1});
+      const result = matchMember(LocalService, record.service);
+      expect(result.matched && result.member).toBe(LocalService.alpha);
+    });
+
+    it('should miss when a parsed document carries a service this caller does not know', () => {
+      const record = Ledger.parse({service: 'omega', scope: 'scope_synthetic', amount: 1});
+      expect(matchMember(LocalService, record.service).matched).toBe(false);
+    });
+  });
+
+  describe('requireMember', () => {
+    it('should return the typed member when the value is one', () => {
+      expect(requireMember(LocalService, 'beta', 'service')).toBe(LocalService.beta);
+    });
+
+    it('should throw a ParseError naming the field and the accepted values', () => {
+      expect(() => requireMember(LocalService, 'gamma', 'service')).toThrow(ParseError);
+      expect(() => requireMember(LocalService, 'gamma', 'service')).toThrow(/service failed validation/);
+      expect(() => requireMember(LocalService, 'gamma', 'service')).toThrow(/alpha, beta/);
+    });
+
+    it('should throw on absence as well as on an unrecognised value', () => {
+      expect(() => requireMember(LocalService, undefined, 'service')).toThrow(ParseError);
+      expect(() => requireMember(LocalService, null, 'service')).toThrow(ParseError);
+    });
+
+    it('should carry a structured issue at the field path', () => {
+      let thrown: unknown;
+      try {
+        requireMember(LocalService, 'gamma', 'service');
+      } catch (error) {
+        thrown = error;
+      }
+      expect((thrown as ParseError).issues[0]?.path).toBe('service');
+      expect((thrown as ParseError).issues[0]?.code).toBe('invalid_value');
+    });
+  });
+});
+
+/**
+ * Compile-time guarantees, asserted with `@ts-expect-error`.
  *
- * This is the whole value of omitting `data` from {@link ParseFailure}, and it is
- * otherwise untestable: a runtime assertion cannot observe a type. The directive
+ * These are the whole value of the discriminated shapes, and they are otherwise
+ * untestable: a runtime assertion cannot observe a type. Each directive below
  * asserts that the line under it **is** a compile error, so if the error ever
- * stops occurring — for example because someone re-adds a `data?: undefined`
- * sibling marker — the unused directive becomes an error itself and
- * `npm run typecheck` goes red.
+ * stops occurring — for example because someone re-adds a `data?: undefined` or
+ * `member?: undefined` sibling marker — the unused directive becomes an error
+ * itself and `npm run typecheck` goes red.
  *
- * That inversion is what makes this a regression guard rather than a comment. It
- * runs under the existing `npm run typecheck` gate, which includes `test/`, so no
- * new tooling is involved. `npm test` cannot see it at all, which is the point.
+ * That inversion is what makes this a regression guard rather than a comment.
+ * It is enforced by the existing `npm run typecheck` gate, which includes
+ * `test/`, so no new tooling is involved.
+ *
+ * The mechanism matters because the obvious alternative does not work here.
+ * Under this repository's `strictNullChecks: false` a `T | undefined` return
+ * type collapses to `T`, so the unhandled case would compile cleanly; only the
+ * absence of the property from the other branch survives that setting.
  */
 describe('compile-time guarantees', () => {
   it('should make an un-narrowed data access a compile error', () => {
@@ -649,6 +755,14 @@ describe('compile-time guarantees', () => {
     expect(unguarded).toBeUndefined();
     // The guarded form compiles and is the only way to reach the document.
     expect(result.success ? result.data : undefined).toBeUndefined();
+  });
+
+  it('should make an un-narrowed member access a compile error', () => {
+    const result = matchMember(LocalService, 'gamma');
+    // @ts-expect-error member is absent from the miss branch, so reading it without narrowing on matched must not compile.
+    const unguarded = result.member;
+    expect(unguarded).toBeUndefined();
+    expect(result.matched ? result.member : undefined).toBeUndefined();
   });
 
   it('should still allow inspecting issues on an un-narrowed result, the benign direction', () => {
