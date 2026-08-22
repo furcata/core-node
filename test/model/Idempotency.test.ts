@@ -126,6 +126,14 @@ describe('Idempotency.Schema', () => {
   });
 
   describe('the stored response', () => {
+    it('should name null as accepted when the body is rejected', () => {
+      const record = {...validRecord(), response: {status: 200, body: 42, truncated: false}};
+      const result = Idempotency.safeParse(record);
+      expect(result.success).toBe(false);
+      const issue = result.issues?.find((entry) => entry.path === 'response.body');
+      expect(issue?.message).toBe('Expected a response body string or null');
+    });
+
     it('should accept a null body, which means the original response had none', () => {
       const record = {...validRecord(), response: {status: 204, body: null, truncated: false}};
       const parsed = Idempotency.parse(record);

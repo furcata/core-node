@@ -11,7 +11,6 @@ import {
   ParseResult,
   parseOrThrow,
   parseResult,
-  requiredKey,
   timestampLike,
   TimestampLike,
   token,
@@ -150,14 +149,9 @@ export namespace Idempotency {
   /**
    * Schema for {@link Response}.
    *
-   * {@link Response.body} is required **and** nullable. It is wrapped in
-   * `requiredKey` because zod inferred a required `z.nullable` key as optional
-   * under the `strictNullChecks: false` setting this package previously used.
-   * That setting is now enabled and the inference is correct without the
-   * wrapper, which is retained pending a deliberate removal; see that helper.
-   * `null` here means the original response genuinely had no body, which is a
-   * different claim from the field being absent, so the distinction has to
-   * survive.
+   * {@link Response.body} is required **and** nullable. `null` here means the
+   * original response genuinely had no body, which is a different claim from
+   * the field being absent, so the distinction has to survive.
    */
   const responseSchema = z.looseObject({
     /**
@@ -166,9 +160,12 @@ export namespace Idempotency {
      */
     status: z.int().min(100).max(599),
     /**
-     * See {@link Response.body}.
+     * See {@link Response.body}. The `error` message is declared on the schema
+     * so a rejection names `null` as accepted; zod's default would report
+     * `expected string`, which is true of the inner schema but false of the
+     * field, and would send a caller looking for the wrong fix.
      */
-    body: requiredKey(z.string().nullable(), 'Expected a response body string or null'),
+    body: z.string({error: 'Expected a response body string or null'}).nullable(),
     /**
      * See {@link Response.truncated}.
      */

@@ -320,6 +320,23 @@ describe('Block.Schema', () => {
     });
   });
 
+  describe('rejection message for the value union', () => {
+    it('should name the accepted shapes rather than reporting a bare invalid input', () => {
+      const result = Block.safeParse({ ...validBlock(), value: true });
+      expect(result.success).toBe(false);
+      const issue = result.issues?.find((entry) => entry.path === 'value');
+      expect(issue?.message).toBe('Expected a string, number, object or array block value');
+    });
+
+    it('should name the accepted shapes when the value is absent entirely', () => {
+      const { value: _omitted, ...withoutValue } = validBlock();
+      const result = Block.safeParse(withoutValue);
+      expect(result.success).toBe(false);
+      const issue = result.issues?.find((entry) => entry.path === 'value');
+      expect(issue?.message).toBe('Expected a string, number, object or array block value');
+    });
+  });
+
   describe('throwing form', () => {
     it('should throw a ParseError naming the shape', () => {
       expect(() => Block.parse({ type: Block.Type.text })).toThrow(ParseError);
