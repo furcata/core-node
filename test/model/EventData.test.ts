@@ -303,6 +303,63 @@ const validEvent = (): Record<string, unknown> => ({
 
 describe('EventData.Schema', () => {
   describe('field inventory', () => {
+    /**
+     * Exhaustive key inventory.
+     *
+     * The `toContain` checks below name 18 of these 37 keys, so a field deleted
+     * from the schema and absent from those lists passes them. It also passes
+     * {@link EventData.SchemaOutput}: that proof is assignability-based, and the
+     * `[x: string]: unknown` index signature `z.looseObject` infers satisfies an
+     * *optional* interface property whether or not the schema declares it.
+     *
+     * A dropped field stops being validated and falls through to the
+     * loose-object passthrough, accepting any value, while
+     * {@link EventData.Interface} still promises it was checked. The list is
+     * literal on purpose — deriving it from `Schema.shape` would shrink with the
+     * deletion and assert nothing.
+     */
+    it('should declare exactly these 37 fields, so a silently dropped field fails here', () => {
+      expect(Object.keys(EventData.Schema.shape).sort()).toEqual([
+        'account',
+        'amount',
+        'area',
+        'backup',
+        'blocks',
+        'booked',
+        'checkout',
+        'clicks',
+        'country',
+        'created',
+        'currency',
+        'description',
+        'duration',
+        'endTime',
+        'expiry',
+        'frequency',
+        'geohash',
+        'hosts',
+        'id',
+        'language',
+        'latitude',
+        'limit',
+        'location',
+        'longitude',
+        'media',
+        'name',
+        'placeId',
+        'placeName',
+        'runHour',
+        'startTime',
+        'status',
+        'type',
+        'uid',
+        'updated',
+        'users',
+        'utcOffset',
+        'views',
+      ]);
+    });
+
     it('should declare the event fields alongside the inherited audit and place fields', () => {
       const keys = Object.keys(EventData.Schema.shape);
       for (const field of ['name', 'account', 'blocks', 'startTime', 'endTime', 'runHour', 'limit', 'amount']) {

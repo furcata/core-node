@@ -889,6 +889,86 @@ const validAccount = (): Record<string, unknown> => ({
 
 describe('Account.Schema', () => {
   describe('field inventory', () => {
+    /**
+     * Exhaustive key inventory.
+     *
+     * The `toContain` checks below name 22 of these 55 keys, which makes them a
+     * spot-check rather than an inventory: a field deleted from the schema and
+     * not named in one of those lists is invisible to them. It is also invisible
+     * to {@link Account.SchemaOutput}, because that proof is assignability-based
+     * and `z.looseObject` infers a `[x: string]: unknown` index signature — an
+     * *optional* interface property is satisfied structurally whether or not the
+     * schema still declares it, so only the removal of a *required* field is a
+     * compile error.
+     *
+     * A field silently dropped from the schema is not a cosmetic loss. The field
+     * stops being validated entirely and falls through to the loose-object
+     * passthrough, where any value is accepted, while {@link Account.Interface}
+     * continues to promise it was checked. This assertion is what makes that a
+     * failure, and it is deliberately a literal list rather than anything
+     * derived from `Schema.shape`, which would delete itself alongside the field
+     * and pass.
+     */
+    it('should declare exactly these 55 fields, so a silently dropped field fails here', () => {
+      expect(Object.keys(Account.Schema.shape).sort()).toEqual([
+        'alias',
+        'appToPersonUseCase',
+        'area',
+        'authorizedRepresentative1',
+        'authorizedRepresentative2',
+        'automaticHeader',
+        'backup',
+        'bca',
+        'brandType',
+        'businessIndustry',
+        'businessName',
+        'businessRegionsOfOperations',
+        'businessRegistrationIdentifier',
+        'businessRegistrationNumber',
+        'businessType',
+        'city',
+        'companyType',
+        'counted',
+        'country',
+        'created',
+        'description',
+        'domain',
+        'domainOk',
+        'domainTimestamp',
+        'estimatedVolume',
+        'expiry',
+        'id',
+        'image',
+        'imageURL',
+        'language',
+        'links',
+        'name',
+        'pending',
+        'postalCode',
+        'ready',
+        'sampleMessage1',
+        'sampleMessage2',
+        'sampleMessage3',
+        'sampleMessage4',
+        'sampleMessage5',
+        'sender',
+        'sending',
+        'status',
+        'stockExchange',
+        'stockTicker',
+        'street1',
+        'street2',
+        'tollFreeUseCase',
+        'type',
+        'uid',
+        'updated',
+        'useCaseDescription',
+        'useCaseDescriptionCTA',
+        'useName',
+        'utcOffset',
+      ]);
+    });
+
     it('should declare the account fields alongside the inherited audit and queue fields', () => {
       const keys = Object.keys(Account.Schema.shape);
       for (const field of ['id', 'backup', 'created', 'updated', 'expiry']) {
