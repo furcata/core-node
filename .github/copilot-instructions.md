@@ -220,6 +220,12 @@ Any update to the root `README.MD` must:
 > that cannot compile at all fails its un-narrowed *and* narrowed reads alike — which reads as a
 > confirmed guarantee. **Gate red + control green** means a guarantee regressed; **gate red + control
 > red** means the harness broke and the gate proves nothing.
+>
+> **It is not blanket coverage.** Its mechanism is `TS2339`, which cannot fire on a type carrying an
+> index signature — so on the 10 declarations extending `BaseFirestore`, green means "cannot be
+> checked", not "is safe". That boundary is itself encoded as a test in
+> `test-consumer/interface/base_db.consumer-boundary.ts`; see
+> `.github/instructions/tests.instructions.md` §6.3.
 
 > **CI gate:** `.github/workflows/nodejs.yml` runs on `push`/`pull_request` to `main` across Node
 > `22.x` and `24.x`, executing `npm ci` → `npm run build` → build-output drift check →

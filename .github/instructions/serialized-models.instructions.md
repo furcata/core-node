@@ -197,3 +197,13 @@ there is nowhere else a consumer could learn it.
 Do not, however, *assert* it in `test-consumer/`. It is the consumer's compiler, not this package's
 contract, and a future TypeScript could legitimately change it — an `@ts-expect-error` on it would
 one day go red for a reason that is nobody's regression.
+
+### Know which types the gate can protect at all
+
+An absence-based guarantee is only enforceable on a type that **rejects undeclared keys**. Where a
+type carries an index signature — every document interface here, via `BaseFirestore` — property
+access is legal by construction, so omitting a field from a branch protects nothing and the gate
+cannot report it. The boundary is *"types that admit arbitrary keys"*, not *"nullable fields"*: a
+nullability guarantee restates cleanly as a presence union, an index signature does not restate at
+all. Before relying on omission, check which side of that line your type is on; the boundary is
+encoded as a test in `test-consumer/interface/base_db.consumer-boundary.ts`.

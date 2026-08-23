@@ -241,6 +241,22 @@ export interface ParseFailure {
  * the compiler's blessing. That is the exact defect the parse boundary was
  * built to remove, reintroduced by the idiomatic spelling.
  *
+ * ### Why the bare form looks like it works
+ *
+ * Because on the error path it does, which is worse than if it plainly failed.
+ * {@link ParseSuccess} declares `issues?: undefined` and `message?: undefined`
+ * so that an un-narrowed result can be logged, so those keys exist on **both**
+ * branches — and with `strictNullChecks` off the `| undefined` collapses.
+ * Measured: in the `else` of `if (result.success)`, where no narrowing has
+ * occurred, `result.issues.length` and `result.message.toUpperCase()` compile
+ * clean under the permissive setting and error under the strict one.
+ *
+ * Those are exactly the fields an error path reaches for. So a consumer writes
+ * the bare form, the failure branch works, and they conclude the spelling is
+ * fine — while the narrowing they think they performed never happened. The
+ * concealment is the hazard, not the two field reads, which are correct at
+ * runtime on that branch.
+ *
  * A consumer cannot discover any of this from the shape of the type, which is
  * why it is documented here rather than left to be found. `npm run
  * typecheck:consumer` compiles the built declarations under the permissive

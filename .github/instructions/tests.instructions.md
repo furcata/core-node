@@ -203,8 +203,20 @@ wrong form looks like the better assertion.
 The assertion silently degrades from *"the property is absent"* to *"the property is possibly
 undefined"*, and nothing can tell. Absences and failures are both cheap to manufacture, so neither
 is a finish condition on its own: check **which** error you are suppressing, not merely that one
-occurred. Verified for the four directives here by stripping them and reading the diagnostics — all
-four are `TS2339`.
+occurred. Verified for the four directives in `schema.consumer-unguarded.ts` by stripping them and
+reading the diagnostics — all four are `TS2339`.
+
+**And checking the error code is not always enough.** Measured while building the boundary fixture
+in §6.3: giving a protected type an index signature left the gate green, because `data` became
+reachable as `unknown` and the deep read then failed on `.amount` instead. The substitute error
+carried the **same code** — `TS2339` — on a **different subject**: *"Property 'data' does not exist
+on type 'ClosedResult'"* became *"Property 'amount' does not exist on type 'unknown'"*.
+
+> When a negative assertion has to survive that, stop inverting and **assert in the must-compile
+> direction** instead — over a type-level predicate such as
+> `type KeyIsReachable<T, K extends PropertyKey> = K extends keyof T ? true : false`, asserted with
+> `const hides: false = …`. A must-compile assertion cannot be satisfied by a substitute error,
+> because it is not satisfied by an error at all.
 
 The consumer fixture reads deep on purpose, because there `TS18048` cannot arise: with
 `strictNullChecks` off there is no possibly-undefined error to substitute in, so a weakened type
@@ -234,6 +246,36 @@ So the strict gate's coverage of this class is **incidental to how one line was 
 consumer gate's is structural. All four `@ts-expect-error` directives have been observed failing
 under the mutation they exist to catch, each with the control green in the same state — none is
 vacuous.
+
+### 6.3 What the gate cannot see — read a green run accordingly
+
+> 🔴 **A green `npm run typecheck:consumer` is not blanket coverage.** The gate's whole mechanism is
+> `TS2339`, and **where a type carries an index signature that error cannot fire**, so the gate is
+> structurally unable to report anything about it. On those types green means *"cannot be checked"*,
+> not *"is safe"*.
+
+`BaseFirestore` declares `[x: string]: any` deliberately, so stored documents predating a change
+still type-check. Measured on the shipped declarations: **10** declarations in `lib/` extend it
+(control on a nonsense base name: `0`), and every one is outside the gate's reach — including the
+document types.
+
+The boundary is **not** "nullable fields cannot be protected": any nullability guarantee can be
+restated as a presence union, `{has: true; x: T} | {has: false}`, and property existence is
+config-independent. It is **"types that admit arbitrary keys cannot be protected."** It can run
+between two types in one namespace — `Idempotency.Interface` extends `BaseFirestore` and is
+unprotectable; `Idempotency.Response` does not and is protectable.
+
+`test-consumer/interface/base_db.consumer-boundary.ts` encodes this as a test rather than as
+folklore, so it outlives everyone who currently knows it. Both directions are self-announcing, and
+both were mutation-validated:
+
+| mutation | gate | control | meaning |
+|---|---|---|---|
+| index signature **added** to a protected type | **red** (`TS2322` + `TS2578`) | green `0` | that type just left coverage silently |
+| index signature **removed** from `BaseFirestore` | **red** (`TS2322` ×2, `TS2339`) | green `0` | the blind spot closed; update the fixture and this section |
+
+Do not "fix" the blind-spot half by making it error. Its **compiling is the assertion**, and it is
+not an endorsement.
 
 The rule this enforces is in
 [`serialized-models.instructions.md`](serialized-models.instructions.md) §8.
