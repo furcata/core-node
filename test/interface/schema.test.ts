@@ -746,10 +746,21 @@ describe('member narrowing', () => {
  * It is enforced by the existing `npm run typecheck` gate, which includes
  * `test/`, so no new tooling is involved.
  *
- * The mechanism matters because the obvious alternative does not work here.
- * Under this repository's `strictNullChecks: false` a `T | undefined` return
- * type collapses to `T`, so the unhandled case would compile cleanly; only the
- * absence of the property from the other branch survives that setting.
+ * 🔴 **The reads below are deliberately shallow — `result.data`, not
+ * `result.data.amount` — and that is load-bearing rather than lazy.** A shallow
+ * read fails with `Property 'data' does not exist`, which fires under every
+ * null-checking setting. Deepening it to `result.data.amount` looks like a
+ * strictly better assertion and is measurably worse: re-add a `data?: undefined`
+ * marker and the deep form still errors here with `TS18048`, so the directive
+ * stays used and this gate stays **green** while the marker protects nobody who
+ * compiles with `strictNullChecks` off. Measured both ways; do not "improve"
+ * these lines.
+ *
+ * That hazard is why `npm run typecheck:consumer` exists. This gate runs under
+ * this repository's settings, where `strict`, `strictNullChecks` and
+ * `noImplicitAny` are all on, so it cannot see whether a guarantee survives for
+ * a consumer who leaves them off. The consumer gate compiles the built
+ * declarations with those flags off and catches exactly the case above.
  */
 describe('compile-time guarantees', () => {
   it('should make an un-narrowed data access a compile error', () => {

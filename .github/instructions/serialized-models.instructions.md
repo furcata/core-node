@@ -126,3 +126,84 @@ Schemas are the intended resolution to §3 and §4, so they will arrive. When th
   passes review and never runs.**
 - Test the rejection path, not only the happy path, and positive-control it: a schema test that
   only asserts a valid object parses passes identically whether the schema is strict or wide open.
+
+---
+
+## 8. A type-level guarantee must not depend on a compiler flag the consumer might not set
+
+This package compiles with `strict`, `strictNullChecks` and `noImplicitAny` all on. **Consumers
+need not**, and the same declaration can enforce something here and enforce nothing for them.
+
+The canonical pair — identical in intent, not in effect:
+
+```ts
+// ❌ Rests on NULL-CHECKING. Inert wherever strictNullChecks is off:
+//    `T | undefined` reduces to `T`, the marker vanishes, and the unguarded
+//    read compiles clean and throws at runtime.
+interface Failure { success: false; data?: undefined }
+
+// ✅ Rests on PROPERTY EXISTENCE. `Property 'data' does not exist` fires
+//    under every setting.
+interface Failure { success: false }
+```
+
+**Prefer the construction that holds either way.** Omitting a property beats marking it
+`?: undefined`; a required discriminant beats an optional one; `unknown` beats `any` regardless of
+flags. When you must depend on a flag, say so in the JSDoc so the next reader knows the guarantee
+has a precondition they do not control.
+
+The trap is not the rule, it is that **nothing in a strict repository can show you the difference**.
+The strict gate passes identically for both shapes above, so the precondition — "the consumer
+shares our settings" — stays unspoken until it silently stops being true.
+
+`npm run typecheck:consumer` is what closes that, with `npm run typecheck:consumer:control` as its
+liveness proof. Both compile fixtures in `test-consumer/` against the **built `lib/*.d.ts`**,
+reached through the package's own `exports` map, with `strictNullChecks` and `noImplicitAny`
+**off**. Add a case there whenever you add a type-level guarantee:
+
+- express the negative with `@ts-expect-error` **plus a description** — if the guarantee breaks, the
+  expected error stops occurring, the directive goes unused, and the compile fails with `TS2578`;
+- **in the strict gate (`test/`), read shallow, not deep, when the guarantee is property absence.**
+  `r.data` fails with `Property 'data' does not exist`, which fires under every setting;
+  `r.data.amount` fails with `TS18048` under strict, so a re-added marker keeps that directive used
+  and the strict gate stays green while protecting nobody. In the consumer fixture either form
+  works — it reads deep because that is the runtime hazard being modelled. Measured both ways; see
+  [`tests.instructions.md`](tests.instructions.md) §6;
+- pair it with the narrowed positive, so a type that is merely unusable cannot satisfy the negative;
+- keep the inert same-shape control that carries no directive and must compile clean. It is the
+  proof the settings are genuinely permissive, and it makes the config self-pinning: restore
+  strictness and the control errors rather than quietly turning the gate into a copy of the strict
+  one.
+
+### The narrowing consequence, which a consumer cannot see from the type
+
+Measured rather than assumed: where `strictNullChecks` is off, **negative narrowing of a boolean
+discriminant does not fire at all** — every type includes `undefined` there, so the truthy branch
+cannot be excluded. `r.ok ? … : r.err` and `if (r.ok) {} else { … }` leave the value un-narrowed
+for such a consumer; `r.ok === false`, `r.ok === true` and `in` narrow under both settings.
+
+Treat this as a design constraint, not trivia. The bare form **compiles, lints and tests green**;
+what it silently removes is the discrimination the discriminated result exists to provide. Reading
+a missing field does not throw either — a numeric payload field read off an un-narrowed result
+yields `undefined`, which propagates as `NaN` or takes a default branch, so a *failed* result can
+flow onward into a computation with the compiler's blessing. That is the defect a parse boundary is
+built to remove, reintroduced by the idiomatic spelling.
+
+So: design discriminated results so the failure branch is reachable with the explicit comparison,
+and **say so in the JSDoc on the type itself** — with the conversion table, as `ParseResult` and
+`MemberResult` now carry. It is a property of the consumer's compiler rather than of the shape, so
+there is nowhere else a consumer could learn it.
+
+Do not, however, *assert* it in `test-consumer/`. It is the consumer's compiler, not this package's
+contract, and a future TypeScript could legitimately change it — an `@ts-expect-error` on it would
+one day go red for a reason that is nobody's regression.
+
+### Know which types the gate can protect at all
+
+An absence-based guarantee is only enforceable on a type that **rejects undeclared keys**. Where a
+type carries an index signature — every document interface here, via `BaseFirestore` — property
+access is legal by construction, so omitting a field from a branch protects nothing and the gate
+cannot report it. The boundary is *"types that admit arbitrary keys"*, not *"nullable fields"*: a
+nullability guarantee restates cleanly as a presence union, an index signature does not restate at
+all. Before relying on omission, check which side of that line your type is on; the boundary is
+encoded as a test in `test-consumer/interface/base_db.consumer-boundary.ts`.

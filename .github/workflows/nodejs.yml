@@ -107,3 +107,60 @@ jobs:
         run: npm run typecheck
         env:
           CI: true
+
+      # Neither gate above can observe how these types behave for a consumer
+      # that compiles more permissively than this package does. `npm run
+      # typecheck` uses this repository's own settings, where `strict`,
+      # `strictNullChecks` and `noImplicitAny` are all on; a consumer need not
+      # set any of them. A type-level guarantee can hold under one
+      # null-checking setting and be completely inert under the other — a
+      # failure branch marked `data?: undefined` errors correctly here and
+      # compiles clean for a consumer with `strictNullChecks` off, because
+      # `T | undefined` reduces to `T` when the flag is off. The unspoken
+      # precondition of the strict gate is that the consumer shares our
+      # settings, and nothing tracked it.
+      #
+      # This step compiles fixtures against the BUILT `lib/*.d.ts` — reached
+      # through the package's own `exports` map, so it type-checks the
+      # declarations consumers actually receive rather than `src/` — with
+      # `strictNullChecks` and `noImplicitAny` off. It runs after the build and
+      # the drift check deliberately: the declarations it reads are only
+      # current because those two steps already passed.
+      #
+      # Mutation-validated with a 2×2, because the obvious one-cell experiment
+      # gives the wrong answer. Reintroducing `data?: undefined` on the failure
+      # branch turns BOTH this step and `npm run typecheck` red — the existing
+      # assertions in test/interface/schema.test.ts read the SHALLOW property
+      # `result.data`, and a property-existence error fires under every setting.
+      # The strict gate's coverage there is incidental to how one line was
+      # phrased. Rewrite those reads as `result.data.amount`, which is the
+      # natural way to express the guarantee, and the marker mutation leaves
+      # `npm run typecheck` GREEN (TS18048 keeps its directive used) while this
+      # step goes RED with TS2578. Control cell: the same deep reads with the
+      # correct type leave both green. The same 2×2 on `member?: undefined` and
+      # MemberMiss behaves identically. That is the divergence this step is for.
+      - name: Typecheck (published declarations under consumer conditions)
+        run: npm run typecheck:consumer
+        env:
+          CI: true
+
+      # Positive control for the step above, and not optional.
+      #
+      # A negative assertion is evidence only if the harness that produced it
+      # works. "The un-narrowed read failed to compile" is produced just as
+      # readily by a fixture that cannot compile at all, and both failure modes
+      # are live here: TS2307, because the `exports` map exposes only `./model`
+      # and `./interface` so a deep path does not resolve; and TS5112, because
+      # passing files on the command line errors before any type analysis
+      # happens. Both were measured. Both take the un-narrowed AND the narrowed
+      # reads down together, which reads as a confirmed guarantee.
+      #
+      # This step compiles only the fixture whose every line must compile, so
+      # the two exit codes can be read together:
+      #   gate red, control green -> a guarantee regressed. Fix the type.
+      #   gate red, control red   -> the harness broke. The gate above proves
+      #                              nothing until it is repaired.
+      - name: Typecheck control (consumer harness liveness)
+        run: npm run typecheck:consumer:control
+        env:
+          CI: true

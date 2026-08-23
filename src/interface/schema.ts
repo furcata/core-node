@@ -173,13 +173,17 @@ export interface ParseSuccess<T> {
  * an optional `data?: undefined`. That distinction is load-bearing rather than
  * stylistic, and it was measured rather than assumed.
  *
- * With `strictNullChecks: false`, which both this package and its consumers
- * compile under, `undefined` is assignable to every type. So a sibling marker of
- * the form `data?: undefined` **collapses**, and `result.data.amount` on an
- * un-narrowed {@link ParseResult} compiles cleanly and throws `TypeError` at
- * runtime. Omitting the property entirely produces `Property 'data' does not
- * exist on type 'ParseFailure'` regardless of the null-checking setting, which
- * is the only form of the guarantee that actually fires here.
+ * A sibling marker of the form `data?: undefined` **collapses** wherever
+ * `strictNullChecks` is off, because `T | undefined` reduces to `T` under that
+ * setting — so `result.data.amount` on an un-narrowed {@link ParseResult}
+ * compiles cleanly and throws `TypeError` at runtime. This package now compiles
+ * with `strictNullChecks` on, so the marker form would look correct here while
+ * protecting nothing for a consumer who leaves it off. Omitting the property
+ * entirely produces `Property 'data' does not exist on type 'ParseFailure'`
+ * regardless of the null-checking setting, which is the only form of the
+ * guarantee that fires either way. `npm run typecheck:consumer` compiles this
+ * package's built declarations under the permissive setting and is what keeps
+ * that true.
  *
  * The asymmetry with {@link ParseSuccess} is deliberate. Reading `.issues` off a
  * success yields `undefined` where a caller expected none to exist — wrong, but
@@ -187,6 +191,15 @@ export interface ParseSuccess<T> {
  * a failure yields an absent value typed as a valid document, which is the exact
  * defect this whole module exists to prevent. Only the dangerous direction is
  * closed.
+ *
+ * One consumer-visible caveat, measured rather than assumed: where
+ * `strictNullChecks` is off, **negative** narrowing of a boolean discriminant
+ * does not fire, because every type includes `undefined` there and so the
+ * success branch cannot be excluded by a falsy test. `r.success ? … : r.issues`
+ * and `if (r.success) {} else { … }` both leave the value un-narrowed for such a
+ * consumer. `r.success === false`, `r.success === true` and the `in` operator
+ * narrow under both settings; prefer the explicit comparison in code meant to be
+ * portable across consumers.
  */
 export interface ParseFailure {
   /**
@@ -209,6 +222,59 @@ export interface ParseFailure {
  *
  * Narrow on `success` to reach the data; there is no branch that offers both a
  * typed document and an unverified one.
+ *
+ * ## 🔴 Narrow with `=== false`, not with `else`
+ *
+ * Write `result.success === false`, `result.success === true` or an `in` test.
+ * **Do not** rely on `result.success ? … : …` or the `else` of
+ * `if (result.success)` to reach the failure branch.
+ *
+ * This is not style. Where `strictNullChecks` is off — which this package no
+ * longer does but a consumer may — **negative narrowing of a boolean
+ * discriminant does not fire at all.** Every type includes `undefined` under
+ * that setting, so the success branch cannot be excluded by a falsy test and
+ * the value stays un-narrowed in the branch where it should have been a
+ * failure. Measured against this package's own built declarations; the
+ * conversion is:
+ *
+ * | form | `strictNullChecks` on | off |
+ * |---|---|---|
+ * | `r.success === false` | narrows | **narrows** |
+ * | `r.success === true` | narrows | **narrows** |
+ * | `'issues' in r` | narrows | **narrows** |
+ * | `r.success ? a : b` (false arm) | narrows | **does not narrow** |
+ * | `!r.success` | narrows | **does not narrow** |
+ * | `if (r.success) {} else {}` | narrows | **does not narrow** |
+ *
+ * The reason this is worth a warning rather than a footnote is the failure
+ * mode. The bare form **compiles, lints and tests green**; what it silently
+ * removes is the discrimination this whole module exists to provide. And
+ * reading a missing field does not throw — a numeric payload field read off an
+ * un-narrowed result yields `undefined`, which propagates as `NaN` or takes a
+ * default branch, so a *failed* parse can flow onward into a computation with
+ * the compiler's blessing. That is the exact defect the parse boundary was
+ * built to remove, reintroduced by the idiomatic spelling.
+ *
+ * ### Why the bare form looks like it works
+ *
+ * Because on the error path it does, which is worse than if it plainly failed.
+ * {@link ParseSuccess} declares `issues?: undefined` and `message?: undefined`
+ * so that an un-narrowed result can be logged, so those keys exist on **both**
+ * branches — and with `strictNullChecks` off the `| undefined` collapses.
+ * Measured: in the `else` of `if (result.success)`, where no narrowing has
+ * occurred, `result.issues.length` and `result.message.toUpperCase()` compile
+ * clean under the permissive setting and error under the strict one.
+ *
+ * Those are exactly the fields an error path reaches for. So a consumer writes
+ * the bare form, the failure branch works, and they conclude the spelling is
+ * fine — while the narrowing they think they performed never happened. The
+ * concealment is the hazard, not the two field reads, which are correct at
+ * runtime on that branch.
+ *
+ * A consumer cannot discover any of this from the shape of the type, which is
+ * why it is documented here rather than left to be found. `npm run
+ * typecheck:consumer` compiles the built declarations under the permissive
+ * setting so the portable form stays exercised.
  *
  * @template T The interface the schema produces.
  */
@@ -630,10 +696,18 @@ export interface MemberMatch<TMember extends string> {
  * Failed narrowing: the value is not a member of the enumeration.
  *
  * There is deliberately **no `member` property on this branch at all**, for the
- * same measured reason as {@link ParseFailure}: under `strictNullChecks: false`
- * a sibling `member?: undefined` marker collapses, and reading `.member` off an
- * un-narrowed result would compile cleanly. Omitting it makes the unhandled case
- * a compile error regardless of the null-checking setting.
+ * same measured reason as {@link ParseFailure}: wherever `strictNullChecks` is
+ * off a sibling `member?: undefined` marker collapses, and reading `.member` off
+ * an un-narrowed result would compile cleanly. Omitting it makes the unhandled
+ * case a compile error regardless of the null-checking setting, which
+ * `npm run typecheck:consumer` verifies against the built declarations.
+ *
+ * Reaching {@link MemberMiss.value} needs the explicit form. Unlike
+ * {@link ParseSuccess}, {@link MemberMatch} declares no mirroring
+ * `value?: undefined`, so there is no second route to the property when negative
+ * narrowing does not fire — and it does not fire for a consumer with
+ * `strictNullChecks` off. Write `result.matched === false`, not
+ * `!result.matched` and not the `else` of `if (result.matched)`.
  */
 export interface MemberMiss {
   /**
@@ -654,6 +728,20 @@ export interface MemberMiss {
 
 /**
  * Result of narrowing an untrusted value to a member of an enumeration.
+ *
+ * ## 🔴 Narrow with `=== false`, not with `else`
+ *
+ * Write `result.matched === false` to reach {@link MemberMiss.value}. The
+ * `else` of `if (result.matched)` and the false arm of
+ * `result.matched ? … : …` **do not narrow** where `strictNullChecks` is off;
+ * see {@link ParseResult} for the measured conversion table and why the bare
+ * form compiles, lints and tests green while removing the discrimination.
+ *
+ * It bites harder here than on a parse result. {@link MemberMatch} declares no
+ * mirroring `value?: undefined`, so unlike `issues` on a parse result there is
+ * no second route to the property — the un-narrowed read is a compile error
+ * rather than a silently wrong value, which is the better of the two failures
+ * but still surprises a caller who followed the obvious spelling.
  *
  * @template TMember The enumeration's member type.
  */

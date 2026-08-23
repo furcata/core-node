@@ -193,6 +193,8 @@ Any update to the root `README.MD` must:
 | Compile only | `npm run compile` (`tsc -p ./tsconfig.json`) |
 | Test (CI mode) | `npm test` (`vitest run`) |
 | **Typecheck (required)** | `npm run typecheck` (`tsc -p ./tsconfig.test.json`) |
+| **Consumer-conditions typecheck (required)** | `npm run typecheck:consumer` (`tsc -p ./tsconfig.consumer.json`) — build first |
+| **Consumer-conditions control (required)** | `npm run typecheck:consumer:control` (`tsc -p ./tsconfig.consumer-control.json`) — must always be `0` |
 | Test (direct / watch / coverage) | `npx vitest run` · `npx vitest` · `npx vitest run --coverage` |
 | Private-marker check | `./.github/scripts/check-private-markers.sh` |
 | Build-output drift check | `npm run build && git status --porcelain -- lib/` (must be empty) |
@@ -204,6 +206,28 @@ Any update to the root `README.MD` must:
 > is **not** the gate — Vitest's `typecheck.include` defaults to `**/*.test-d.ts`, and this repo
 > has none, so it checks zero files and always reports "no errors".
 
+> **`npm run typecheck:consumer` is a third, non-overlapping gate.** The two above run under *this*
+> package's settings, where `strict`, `strictNullChecks` and `noImplicitAny` are all on. Consumers
+> need not set any of them, and a type-level guarantee can hold under one null-checking setting and
+> be completely inert under the other — a failure branch marked `data?: undefined` errors correctly
+> here and compiles clean where `strictNullChecks` is off. This gate compiles fixtures in
+> `test-consumer/` against the **built `lib/*.d.ts`**, through the package's own `exports` map, with
+> those flags off. Run `npm run build` first; it reads compiled output, not `src/`. The rule it
+> enforces is in `.github/instructions/serialized-models.instructions.md` §8.
+>
+> Read it together with `npm run typecheck:consumer:control`, which compiles only the fixture whose
+> every line must compile. A negative assertion is evidence only if the harness works, and a fixture
+> that cannot compile at all fails its un-narrowed *and* narrowed reads alike — which reads as a
+> confirmed guarantee. **Gate red + control green** means a guarantee regressed; **gate red + control
+> red** means the harness broke and the gate proves nothing.
+>
+> **It is not blanket coverage.** Its mechanism is `TS2339`, which cannot fire on a type carrying an
+> index signature — so on the 10 declarations extending `BaseFirestore`, green means "cannot be
+> checked", not "is safe". That boundary is itself encoded as a test in
+> `test-consumer/interface/base_db.consumer-boundary.ts`; see
+> `.github/instructions/tests.instructions.md` §6.3.
+
 > **CI gate:** `.github/workflows/nodejs.yml` runs on `push`/`pull_request` to `main` across Node
 > `22.x` and `24.x`, executing `npm ci` → `npm run build` → build-output drift check →
-> private-marker check → `npm test` → `npm run typecheck`. Changes must keep all of these green.
+> private-marker check → `npm test` → `npm run typecheck` → `npm run typecheck:consumer` →
+> `npm run typecheck:consumer:control`. Changes must keep all of these green.

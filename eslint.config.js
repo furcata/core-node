@@ -45,6 +45,7 @@ export default tseslint.config(
         project: [
           './tsconfig.json',
           './tsconfig.test.json',
+          './tsconfig.consumer.json',
         ],
         jsDocParsingMode: 'type-info',
         ecmaVersion: 'latest',
@@ -61,6 +62,11 @@ export default tseslint.config(
     files: [
       'src/**/*.ts',
       'test/**/*.ts',
+      // Consumer-conditions type fixtures. Listed so the directory is linted
+      // rather than exempt: a path ESLint does not visit is a path a real
+      // problem can sit in unnoticed. Verified by planting a `no-dupe-keys`
+      // violation here and observing it reported.
+      'test-consumer/**/*.ts',
     ],
     rules: {
       'no-restricted-syntax': [
