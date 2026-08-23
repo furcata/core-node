@@ -18,21 +18,21 @@ export interface MessageQueue {
    * Number of messages that have been created but not yet validated or approved
    * for sending.
    */
-  pending?: number;
+  pending?: number | null;
   /**
    * Number of messages that have passed validation and are ready to be picked
    * up by the sender worker.
    */
-  ready?: number;
+  ready?: number | null;
   /**
    * Number of messages currently assigned to a sender worker for processing.
    */
-  sender?: number;
+  sender?: number | null;
   /**
    * Number of messages actively being transmitted to the downstream messaging
    * provider (e.g., Twilio).
    */
-  sending?: number;
+  sending?: number | null;
   /**
    * Arbitrary snapshot or metadata captured at the time the queue was last
    * counted; used for auditing and diagnostics.
@@ -55,19 +55,19 @@ export const messageQueueShape = {
   /**
    * See {@link MessageQueue.pending}.
    */
-  pending: counter().optional(),
+  pending: counter().nullish(),
   /**
    * See {@link MessageQueue.ready}.
    */
-  ready: counter().optional(),
+  ready: counter().nullish(),
   /**
    * See {@link MessageQueue.sender}.
    */
-  sender: counter().optional(),
+  sender: counter().nullish(),
   /**
    * See {@link MessageQueue.sending}.
    */
-  sending: counter().optional(),
+  sending: counter().nullish(),
   /**
    * See {@link MessageQueue.counted}. Deliberately open: the field is declared
    * as an arbitrary diagnostic snapshot and constraining it here would narrow a

@@ -33,10 +33,40 @@ it is a wrong shape replicated into every consumer.
   (`Account.Interface`). Enums sit beside it in the same namespace.
 - **Fields are optional (`?`) by default** for stored entities. Firestore documents are sparse and
   partially populated; a required field in the type is a promise the datastore does not keep.
-- **`?` and `| null` mean different things.** Use `?` for "may not be present" and `| null` for
-  "explicitly absent and must survive a JSON round-trip" — `undefined` keys are dropped by
-  `JSON.stringify`, `null` keys are not. `place.ts` uses `| null` deliberately; match the
-  surrounding convention rather than mixing.
+- **A stored optional field must be declared `?: T | null` and validated with `.nullish()`.**
+  This is not a style preference, it is what the datastore does. Firestore stores an absent
+  optional field as an **explicit `null`** under common write patterns, so `?` alone describes a
+  shape that stored documents do not have. A schema built from `.optional()` rejects `null`, which
+  means it rejects the very documents it exists to validate — measured at 25/25 stored `account`
+  documents and 12/12 stored `price` documents before this was fixed.
+  - Declare `.nullish()` on the schema field **and** `| null` on the interface property, together.
+    They are one change. A schema that accepts `null` while the interface promises it cannot occur
+    is the runtime-versus-declaration mismatch that no amount of type checking can see.
+  - The inventory in `test/interface/schema.test.ts` (`nullRejecting`) enforces this. It is
+    deliberately a **reject-list**, so it shrinks toward empty and a blanket loosening turns it
+    red — an accept-list would silently grow instead.
+- **`?` and `| null` mean different things, and a stored field is usually both.** `?` is "the key
+  may not be present"; `| null` is "the key is present and explicitly empty, and that must survive
+  a JSON round-trip" — `undefined` keys are dropped by `JSON.stringify`, `null` keys are not. Both
+  occur in stored data, which is why `.nullish()` rather than either alone is the default there.
+  Keep `null` in the parse output rather than folding it to `undefined`: a read-modify-write
+  through a folding schema deletes the stored field, and `x === undefined` and `'key' in obj` give
+  different answers for the two.
+- **Two exemptions, and only these two.** Both are inventoried in the test above:
+  - A **required** field never accepts `null`. A required field carrying `null` is exactly the
+    load-bearing absence the requirement exists to stop.
+  - An **instant-valued** field — anything validated by `auditTimestamp()` or `timestampLike()` —
+    stays `.optional()` and keeps rejecting `null`. An explicitly null timestamp is not a time, and
+    reading one as epoch zero sorts it first and expires it immediately. No stored null was
+    observed in any of these fields, so this exemption costs nothing today; if one is ever
+    observed, the fix is a documented decision about what a null instant means, **not** a blanket
+    loosening.
+- **Validating an inbound payload is a different job from reading a stored document.** No schema in
+  this package currently validates an HTTP body, a callable `data` argument or a webhook payload —
+  every `parse`/`safeParse` here is a stored-document boundary. If one is ever added, `.optional()`
+  is correct for it, because a JSON body genuinely omits a key rather than nulling it, and
+  `.nullish()` there would weaken untrusted-input validation. **Do not reuse a stored-document
+  schema for an inbound payload; declare a separate one.**
 - **Constrain string enumerations with an enum or a union.** Where a raw stored value must be
   tolerated, use `T | string` — **never `T | any`**, which collapses to `any` and silently stops
   discriminating while still reading as though it constrains something.

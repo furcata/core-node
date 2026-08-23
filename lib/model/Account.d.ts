@@ -26,7 +26,7 @@ export declare namespace Account {
      * status to `paused` is the required mechanism for stopping the queue
      * without permanently deactivating the account.
      */
-    enum Status {
+    export enum Status {
         active = "active",
         inactive = "inactive",
         suspended = "suspended",
@@ -38,7 +38,7 @@ export declare namespace Account {
      * High-level classification of the account organisation type, used for
      * Twilio brand registration and compliance routing.
      */
-    enum Type {
+    export enum Type {
         business = "business",
         government = "government",
         nonProfit = "non_profit"
@@ -47,7 +47,7 @@ export declare namespace Account {
      * Access-control role assigned to a user within an account, used by
      * Firestore security rules and Cloud Function permission checks.
      */
-    enum Roles {
+    export enum Roles {
         agent = "agent",
         admin = "admin",
         owner = "owner",
@@ -57,7 +57,7 @@ export declare namespace Account {
      * Accepted job-position values for the authorised representative during
      * Twilio brand registration.
      */
-    enum AuthorizedRepresentativeJobPosition {
+    export enum AuthorizedRepresentativeJobPosition {
         director = "Director",
         gm = "GM",
         vp = "VP",
@@ -73,32 +73,32 @@ export declare namespace Account {
      * Twilio requires at least one authorised representative; a second is
      * optional for additional verification.
      */
-    interface AuthorizedRepresentative {
+    export interface AuthorizedRepresentative {
         /**
          * Representative's legal first name.
          */
-        firstName?: string;
+        firstName?: string | null;
         /**
          * Representative's legal last name.
          */
-        lastName?: string;
+        lastName?: string | null;
         /**
          * Representative's business email address.
          */
-        email?: string;
+        email?: string | null;
         /**
          * Representative's direct phone number in E.164 format.
          */
-        phoneNumber?: string;
+        phoneNumber?: string | null;
         /**
          * Representative's business title as it appears on company documents.
          */
-        businessTitle?: string;
+        businessTitle?: string | null;
         /**
          * Representative's seniority or functional role; see
          * {@link AuthorizedRepresentativeJobPosition} for accepted values.
          */
-        jobPosition?: AuthorizedRepresentativeJobPosition;
+        jobPosition?: AuthorizedRepresentativeJobPosition | null;
     }
     /**
      * Twilio brand type required for A2P 10DLC registration; determined
@@ -107,7 +107,7 @@ export declare namespace Account {
      * Accepted values for the Twilio API are `'SOLE_PROPRIETOR'`,
      * `'LOW_VOLUME_STANDARD'`, and `'STANDARD'`.
      */
-    enum BrandType {
+    export enum BrandType {
         soleProprietor = "SOLE_PROPRIETOR",
         lowVolumeStandard = "LOW_VOLUME_STANDARD",
         standard = "STANDARD"
@@ -119,7 +119,7 @@ export declare namespace Account {
      * Accepted values are `'public'`, `'private'`, `'non-profit'`, and
      * `'government'`.
      */
-    enum CompanyType {
+    export enum CompanyType {
         public = "public",
         private = "private",
         nonProfit = "non-profit",
@@ -133,7 +133,7 @@ export declare namespace Account {
      * `'Limited Liability Corporation'`, `'Co-operative'`,
      * `'Non-profit Corporation'`, and `'Corporation'`.
      */
-    enum BusinessType {
+    export enum BusinessType {
         soleProprietorship = "Sole Proprietorship",
         partnership = "Partnership",
         limitedLiabilityCorporation = "Limited Liability Corporation",
@@ -148,7 +148,7 @@ export declare namespace Account {
      * The full list of accepted values is documented in the inline comment above
      * this enum.
      */
-    enum BusinessIndustry {
+    export enum BusinessIndustry {
         automotive = "AUTOMOTIVE",
         agriculture = "AGRICULTURE",
         banking = "BANKING",
@@ -190,7 +190,7 @@ export declare namespace Account {
      * Accepted values are `'AFRICA'`, `'ASIA'`, `'EUROPE'`, `'LATIN_AMERICA'`,
      * `'USA_AND_CANADA'`, and `'AUSTRALIA'`.
      */
-    enum BusinessRegionsOfOperations {
+    export enum BusinessRegionsOfOperations {
         africa = "AFRICA",
         asia = "ASIA",
         europe = "EUROPE",
@@ -208,7 +208,7 @@ export declare namespace Account {
      * Note: to register for A2P 10DLC, select `CBN` — `CCN` is no longer
      * accepted by Twilio for Canadian registrations.
      */
-    enum BusinessRegistrationIdentifier {
+    export enum BusinessRegistrationIdentifier {
         ein = "EIN",
         duns = "DUNS",
         ccn = "CCN",
@@ -229,7 +229,7 @@ export declare namespace Account {
      * accepted exchange codes is documented in the inline comment above this
      * enum.
      */
-    enum StockExchange {
+    export enum StockExchange {
         none = "NONE",
         nasdaq = "NASDAQ",
         nyse = "NYSE",
@@ -267,7 +267,7 @@ export declare namespace Account {
      * The full list of accepted values is documented in the inline comment above
      * this enum.
      */
-    enum AppToPersonUseCase {
+    export enum AppToPersonUseCase {
         twoFactorAuthentication = "2FA",
         accountNotification = "ACCOUNT_NOTIFICATION",
         agentsFranchises = "AGENTS_FRANCHISES",
@@ -289,6 +289,25 @@ export declare namespace Account {
         sweepstake = "SWEEPSTAKE"
     }
     /**
+     * Social and web links, derived from the shared-helpers `User.InterfaceLinks`
+     * definition with every member additionally permitted to be `null`.
+     *
+     * Declared as a mapped type over `User.InterfaceLinks` rather than as a
+     * hand-written copy, so a member added or renamed upstream appears here
+     * automatically and this type cannot drift from the definition it is derived
+     * from. The runtime schema is a separate hand-written copy and *can* drift;
+     * {@link LinksKeysCovered} is what catches that.
+     *
+     * The `| null` is what the stored documents actually require. A link that has
+     * never been filled in is written as an explicit `null` rather than omitted,
+     * and `User.InterfaceLinks` alone cannot describe that — which is also why
+     * this type exists rather than the field being declared `User.InterfaceLinks`
+     * directly.
+     */
+    export type Links = {
+        [TMember in keyof User.InterfaceLinks]?: User.InterfaceLinks[TMember] | null;
+    };
+    /**
      * Firestore document shape for a Furcata account.
      *
      * Extends {@link BaseFirestore} for auditing fields and {@link MessageQueue}
@@ -297,28 +316,28 @@ export declare namespace Account {
      * and campaign registration, enforce messaging queue limits, manage billing
      * via Stripe Connected Accounts, and control domain-based authentication.
      */
-    interface Interface extends BaseFirestore, MessageQueue {
+    export interface Interface extends BaseFirestore, MessageQueue {
         /**
          * Preferred language.
          */
-        language?: string;
+        language?: string | null;
         /**
          * Image path.
          */
-        image?: string;
+        image?: string | null;
         /**
          * Full image URL for quick use.
          */
-        imageURL?: string;
+        imageURL?: string | null;
         /**
          * Account name.
          * It should be the legal name or in case of sending on behalf an eleted official, use that name
          */
-        name?: string;
+        name?: string | null;
         /**
          * Legal business name.
          */
-        businessName?: string;
+        businessName?: string | null;
         /**
          * The name to use.
          * Examples:
@@ -326,149 +345,151 @@ export declare namespace Account {
          * If they don't match: businessName (name)
          * This works for example in case of registering a government organization that sends on behalf of elected official
          */
-        useName?: string;
+        useName?: string | null;
         /**
          * Public site description.
          */
-        description?: string;
+        description?: string | null;
         /**
          * Current lifecycle status of the account; see {@link Status} for accepted
          * values.
          */
-        status?: Status;
+        status?: Status | null;
         /**
          * Organisation classification; see {@link Type} for accepted values.
          */
-        type?: Type;
+        type?: Type | null;
         /**
          * Firebase Auth UID of the account owner.
          */
-        uid?: string;
+        uid?: string | null;
         /**
          * Social and web links associated with the account, sourced from the
-         * shared-helpers `User.InterfaceLinks` definition.
+         * shared-helpers `User.InterfaceLinks` definition; see {@link Links} for why
+         * the field is declared through a mapped type rather than as
+         * `User.InterfaceLinks` directly.
          */
-        links?: User.InterfaceLinks;
+        links?: Links | null;
         /**
          * Legal company structure; see {@link CompanyType} for accepted values.
          * Submitted to Twilio during brand registration.
          */
-        companyType?: CompanyType;
+        companyType?: CompanyType | null;
         /**
          * Stock exchange on which the company is listed; see {@link StockExchange}
          * for accepted values. Use `NONE` for private companies.
          */
-        stockExchange?: StockExchange;
+        stockExchange?: StockExchange | null;
         /**
          * Ticker symbol of the company on the `stockExchange`, if publicly traded.
          */
-        stockTicker?: string;
+        stockTicker?: string | null;
         /**
          * Legal form of the business entity; see {@link BusinessType} for accepted
          * values.
          */
-        businessType?: BusinessType;
+        businessType?: BusinessType | null;
         /**
          * Regions where the account operates; see {@link BusinessRegionsOfOperations}
          * for accepted values.
          */
-        businessRegionsOfOperations?: BusinessRegionsOfOperations;
+        businessRegionsOfOperations?: BusinessRegionsOfOperations | null;
         /**
          * Type of government-issued registration number provided; see
          * {@link BusinessRegistrationIdentifier} for accepted values. Must be
          * sent to Twilio in uppercase.
          */
-        businessRegistrationIdentifier?: BusinessRegistrationIdentifier;
+        businessRegistrationIdentifier?: BusinessRegistrationIdentifier | null;
         /**
          * Primary industry of the account; see {@link BusinessIndustry} for
          * accepted values.
          */
-        businessIndustry?: BusinessIndustry;
+        businessIndustry?: BusinessIndustry | null;
         /**
          * Government-issued business registration number corresponding to the
          * `businessRegistrationIdentifier` type (e.g., EIN, DUNS).
          */
-        businessRegistrationNumber?: string;
+        businessRegistrationNumber?: string | null;
         /**
          * Primary authorised representative for Twilio brand registration.
          */
-        authorizedRepresentative1?: AuthorizedRepresentative;
+        authorizedRepresentative1?: AuthorizedRepresentative | null;
         /**
          * Secondary authorised representative for Twilio brand registration
          * (optional).
          */
-        authorizedRepresentative2?: AuthorizedRepresentative;
+        authorizedRepresentative2?: AuthorizedRepresentative | null;
         /**
          * Estimated monthly message volume used to auto-select the appropriate
          * `brandType` for Twilio A2P 10DLC registration.
          */
-        estimatedVolume?: number;
+        estimatedVolume?: number | null;
         /**
          * Twilio brand tier derived from `estimatedVolume`; see {@link BrandType}
          * for accepted values.
          */
-        brandType?: BrandType;
+        brandType?: BrandType | null;
         /**
          * A2P 10DLC campaign use case; see {@link AppToPersonUseCase} for accepted
          * values. Submitted to Twilio during campaign registration.
          */
-        appToPersonUseCase?: AppToPersonUseCase;
+        appToPersonUseCase?: AppToPersonUseCase | null;
         /**
          * Declared use-case description for toll-free number campaign registration.
          */
-        tollFreeUseCase?: string;
+        tollFreeUseCase?: string | null;
         /**
          * Detailed description of the use case to use on the 10DLC registration and for Twilio to understand the use case and be able to approve it.
          */
-        useCaseDescription?: string;
+        useCaseDescription?: string | null;
         /**
          * Shorter and to the point to use on the opt-in consent.
          */
-        useCaseDescriptionCTA?: string;
+        useCaseDescriptionCTA?: string | null;
         /**
          * This is used to turn on/off the automatic header that is added to the top of the message for compliance reasons.
          * This is a custom feature for bulk and test messages in case the customer wants to use their own header or put the identification on the footer.
          * This should not be used for transactional messages.
          */
-        automaticHeader?: boolean;
+        automaticHeader?: boolean | null;
         /**
          * Postal or ZIP code of the account's registered business address.
          */
-        postalCode?: string;
+        postalCode?: string | null;
         /**
          * Administrative region (state/province) of the business address.
          */
-        area?: string;
+        area?: string | null;
         /**
          * City of the business address.
          */
-        city?: string;
+        city?: string | null;
         /**
          * First line of the street address.
          */
-        street1?: string;
+        street1?: string | null;
         /**
          * Second line of the street address (suite, floor, etc.).
          */
-        street2?: string;
+        street2?: string | null;
         /**
          * ISO 3166-1 alpha-2 country code for the business address (e.g., `"US"`).
          */
-        country?: string;
+        country?: string | null;
         /**
          * UTC offset in minutes for the place's local timezone.
          */
-        utcOffset?: number;
+        utcOffset?: number | null;
         /**
          * Custom domain associated with this account (e.g., `"example.com"`), used
          * for domain-based authentication and white-labelling.
          */
-        domain?: string;
+        domain?: string | null;
         /**
          * When `true`, the `domain` value has been verified and is active for
          * routing.
          */
-        domainOk?: boolean;
+        domainOk?: boolean | null;
         /**
          * Timestamp recording when the domain was last verified or checked.
          */
@@ -477,34 +498,75 @@ export declare namespace Account {
          * Short alphanumeric alias for this account used in public-facing URLs
          * and API routes.
          */
-        alias?: string;
+        alias?: string | null;
         /**
          * First sample message submitted to Twilio during A2P 10DLC campaign
          * registration to demonstrate the type of content that will be sent.
          */
-        sampleMessage1?: string;
+        sampleMessage1?: string | null;
         /**
          * Second sample message for Twilio campaign registration.
          */
-        sampleMessage2?: string;
+        sampleMessage2?: string | null;
         /**
          * Third sample message for Twilio campaign registration.
          */
-        sampleMessage3?: string;
+        sampleMessage3?: string | null;
         /**
          * Fourth sample message for Twilio campaign registration.
          */
-        sampleMessage4?: string;
+        sampleMessage4?: string | null;
         /**
          * Fifth sample message for Twilio campaign registration.
          */
-        sampleMessage5?: string;
+        sampleMessage5?: string | null;
         /**
          * Stripe Connected Account ID used for billing and payment processing on
          * behalf of this account.
          */
-        bca?: string;
+        bca?: string | null;
     }
+    /**
+     * Schema for the social and web links block sourced from the shared-helpers
+     * `User.InterfaceLinks` definition.
+     *
+     * Declared here rather than imported because that package ships types only.
+     * {@link LinksKeysCovered} below is what keeps this copy honest — **not** the
+     * compile-time proof on {@link Schema}, which cannot see a member added
+     * upstream. `z.looseObject` infers a `[x: string]: unknown` index signature,
+     * and an index signature on the source of an assignment does not supply named
+     * members to satisfy an optional property on the target, so a new upstream
+     * `mastodon?: string` is simply read as absent-and-optional and checks clean.
+     * That was measured, by adding a member upstream and observing the build stay
+     * green.
+     */
+    const linksSchema: z.ZodObject<{
+        behance: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        dribbble: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        facebook: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        instagram: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        linkedin: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        tiktok: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        x: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        youtube: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        website: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$loose>;
+    /**
+     * Compile-time proof that {@link linksSchema} declares a field for **every**
+     * member of the shared-helpers `User.InterfaceLinks` definition.
+     *
+     * This is the drift detector for the hand-maintained copy above, and it is
+     * separate from {@link SchemaOutput} because the two catch opposite failures.
+     * `SchemaOutput` compares inferred *values* and so catches this copy declaring
+     * a member with the wrong type; it is structurally blind to a member that is
+     * missing here, because an absent optional property is a legal shape. This
+     * alias compares *keys*, so a member added or renamed upstream and not
+     * followed here is a build failure naming the member.
+     *
+     * Verified by adding a member to the upstream definition and observing this
+     * alias turn red while everything else stayed green.
+     */
+    export type LinksKeysCovered = AssertSchemaOutput<keyof User.InterfaceLinks, keyof typeof linksSchema.shape>;
     /**
      * Runtime schema producing {@link Interface}.
      *
@@ -523,84 +585,99 @@ export declare namespace Account {
      *
      * Unknown keys are preserved, matching the `[x: string]: any` index signature
      * inherited from {@link BaseFirestore}.
+     *
+     * Every optional field is `.nullish()` rather than `.optional()`. A stored
+     * account is filled in progressively and its unfilled registration fields are
+     * written as an explicit `null` rather than omitted, so a schema accepting
+     * only `undefined` rejected substantially every stored account rather than an
+     * unusual one. The loosening is bounded to `null` alone: an unrecognised enum
+     * member, a wrong type and an out-of-range offset are all still rejected, as
+     * are `null` on {@link Interface.domainTimestamp} and on the audit timestamps.
+     *
+     * Stored accounts also carry place fields — `geohash`, `latitude`,
+     * `longitude`, `placeId` — that {@link Interface} does not declare. They pass
+     * through as unknown keys and are preserved rather than rejected, so they are
+     * unaffected by any of the above. Whether they should be modelled here, most
+     * likely by spreading `basePlaceDataShape`, is a separate question for the
+     * owner of this shape and is deliberately not answered by this schema.
      */
-    const Schema: z.ZodObject<{
-        language: z.ZodOptional<z.ZodString>;
-        image: z.ZodOptional<z.ZodString>;
-        imageURL: z.ZodOptional<z.ZodString>;
-        name: z.ZodOptional<z.ZodString>;
-        businessName: z.ZodOptional<z.ZodString>;
-        useName: z.ZodOptional<z.ZodString>;
-        description: z.ZodOptional<z.ZodString>;
-        status: z.ZodOptional<z.ZodEnum<typeof Status>>;
-        type: z.ZodOptional<z.ZodEnum<typeof Type>>;
-        uid: z.ZodOptional<z.ZodString>;
-        links: z.ZodOptional<z.ZodObject<{
-            behance: z.ZodOptional<z.ZodString>;
-            dribbble: z.ZodOptional<z.ZodString>;
-            facebook: z.ZodOptional<z.ZodString>;
-            instagram: z.ZodOptional<z.ZodString>;
-            linkedin: z.ZodOptional<z.ZodString>;
-            tiktok: z.ZodOptional<z.ZodString>;
-            x: z.ZodOptional<z.ZodString>;
-            youtube: z.ZodOptional<z.ZodString>;
-            website: z.ZodOptional<z.ZodString>;
-        }, z.core.$loose>>;
-        companyType: z.ZodOptional<z.ZodEnum<typeof CompanyType>>;
-        stockExchange: z.ZodOptional<z.ZodEnum<typeof StockExchange>>;
-        stockTicker: z.ZodOptional<z.ZodString>;
-        businessType: z.ZodOptional<z.ZodEnum<typeof BusinessType>>;
-        businessRegionsOfOperations: z.ZodOptional<z.ZodEnum<typeof BusinessRegionsOfOperations>>;
-        businessRegistrationIdentifier: z.ZodOptional<z.ZodEnum<typeof BusinessRegistrationIdentifier>>;
-        businessIndustry: z.ZodOptional<z.ZodEnum<typeof BusinessIndustry>>;
-        businessRegistrationNumber: z.ZodOptional<z.ZodString>;
-        authorizedRepresentative1: z.ZodOptional<z.ZodObject<{
-            firstName: z.ZodOptional<z.ZodString>;
-            lastName: z.ZodOptional<z.ZodString>;
-            email: z.ZodOptional<z.ZodString>;
-            phoneNumber: z.ZodOptional<z.ZodString>;
-            businessTitle: z.ZodOptional<z.ZodString>;
-            jobPosition: z.ZodOptional<z.ZodEnum<typeof AuthorizedRepresentativeJobPosition>>;
-        }, z.core.$loose>>;
-        authorizedRepresentative2: z.ZodOptional<z.ZodObject<{
-            firstName: z.ZodOptional<z.ZodString>;
-            lastName: z.ZodOptional<z.ZodString>;
-            email: z.ZodOptional<z.ZodString>;
-            phoneNumber: z.ZodOptional<z.ZodString>;
-            businessTitle: z.ZodOptional<z.ZodString>;
-            jobPosition: z.ZodOptional<z.ZodEnum<typeof AuthorizedRepresentativeJobPosition>>;
-        }, z.core.$loose>>;
-        estimatedVolume: z.ZodOptional<z.ZodNumber>;
-        brandType: z.ZodOptional<z.ZodEnum<typeof BrandType>>;
-        appToPersonUseCase: z.ZodOptional<z.ZodEnum<typeof AppToPersonUseCase>>;
-        tollFreeUseCase: z.ZodOptional<z.ZodString>;
-        useCaseDescription: z.ZodOptional<z.ZodString>;
-        useCaseDescriptionCTA: z.ZodOptional<z.ZodString>;
-        automaticHeader: z.ZodOptional<z.ZodBoolean>;
-        postalCode: z.ZodOptional<z.ZodString>;
-        area: z.ZodOptional<z.ZodString>;
-        city: z.ZodOptional<z.ZodString>;
-        street1: z.ZodOptional<z.ZodString>;
-        street2: z.ZodOptional<z.ZodString>;
-        country: z.ZodOptional<z.ZodString>;
-        utcOffset: z.ZodOptional<z.ZodInt>;
-        domain: z.ZodOptional<z.ZodString>;
-        domainOk: z.ZodOptional<z.ZodBoolean>;
+    export const Schema: z.ZodObject<{
+        language: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        image: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        imageURL: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        name: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        businessName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        useName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        description: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        status: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof Status>>>;
+        type: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof Type>>>;
+        uid: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        links: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            behance: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            dribbble: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            facebook: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            instagram: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            linkedin: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            tiktok: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            x: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            youtube: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            website: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        }, z.core.$loose>>>;
+        companyType: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof CompanyType>>>;
+        stockExchange: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof StockExchange>>>;
+        stockTicker: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        businessType: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof BusinessType>>>;
+        businessRegionsOfOperations: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof BusinessRegionsOfOperations>>>;
+        businessRegistrationIdentifier: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof BusinessRegistrationIdentifier>>>;
+        businessIndustry: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof BusinessIndustry>>>;
+        businessRegistrationNumber: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        authorizedRepresentative1: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            firstName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            lastName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            email: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            phoneNumber: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            businessTitle: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            jobPosition: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof AuthorizedRepresentativeJobPosition>>>;
+        }, z.core.$loose>>>;
+        authorizedRepresentative2: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            firstName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            lastName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            email: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            phoneNumber: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            businessTitle: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            jobPosition: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof AuthorizedRepresentativeJobPosition>>>;
+        }, z.core.$loose>>>;
+        estimatedVolume: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        brandType: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof BrandType>>>;
+        appToPersonUseCase: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof AppToPersonUseCase>>>;
+        tollFreeUseCase: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        useCaseDescription: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        useCaseDescriptionCTA: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        automaticHeader: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
+        postalCode: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        area: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        city: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        street1: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        street2: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        country: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        utcOffset: z.ZodOptional<z.ZodNullable<z.ZodInt>>;
+        domain: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        domainOk: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
         domainTimestamp: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
-        alias: z.ZodOptional<z.ZodString>;
-        sampleMessage1: z.ZodOptional<z.ZodString>;
-        sampleMessage2: z.ZodOptional<z.ZodString>;
-        sampleMessage3: z.ZodOptional<z.ZodString>;
-        sampleMessage4: z.ZodOptional<z.ZodString>;
-        sampleMessage5: z.ZodOptional<z.ZodString>;
-        bca: z.ZodOptional<z.ZodString>;
-        pending: z.ZodOptional<z.ZodNumber>;
-        ready: z.ZodOptional<z.ZodNumber>;
-        sender: z.ZodOptional<z.ZodNumber>;
-        sending: z.ZodOptional<z.ZodNumber>;
+        alias: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        sampleMessage1: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        sampleMessage2: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        sampleMessage3: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        sampleMessage4: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        sampleMessage5: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        bca: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        pending: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        ready: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        sender: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        sending: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
         counted: z.ZodOptional<z.ZodUnknown>;
-        id: z.ZodOptional<z.ZodString>;
-        backup: z.ZodOptional<z.ZodBoolean>;
+        id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        backup: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
         created: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         updated: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         expiry: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
@@ -608,19 +685,21 @@ export declare namespace Account {
     /**
      * Compile-time proof that {@link Schema} produces {@link Interface}.
      *
-     * This also pins {@link Interface.links} against the shared-helpers
-     * `User.InterfaceLinks` definition: if that type gains or changes a field and
-     * `linksSchema` is not updated to match, the divergence is a build failure
-     * here rather than a field silently rejected at runtime.
+     * This compares inferred *values*, so it catches `linksSchema` declaring a
+     * member of {@link Links} with the wrong type. It does **not** catch a member
+     * added upstream that `linksSchema` never declared — an absent optional
+     * property is a legal shape, so the check passes. {@link LinksKeysCovered}
+     * covers that case; the two together are what pin this package to the
+     * shared-helpers `User.InterfaceLinks` definition.
      */
-    type SchemaOutput = AssertSchemaOutput<z.infer<typeof Schema>, Interface>;
+    export type SchemaOutput = AssertSchemaOutput<z.infer<typeof Schema>, Interface>;
     /**
      * Validates untrusted data as an account document without throwing.
      *
      * @param {unknown} value - Untrusted value, typically the raw data of a stored account document.
      * @return {ParseResult<Interface>} Success carrying the typed account, or failure carrying the reasons.
      */
-    const safeParse: (value: unknown) => ParseResult<Interface>;
+    export const safeParse: (value: unknown) => ParseResult<Interface>;
     /**
      * Validates untrusted data as an account document, throwing when it does not
      * conform.
@@ -629,5 +708,6 @@ export declare namespace Account {
      * @return {Interface} The validated account document.
      * @throws {ParseError} When the value does not conform to {@link Schema}.
      */
-    const parse: (value: unknown) => Interface;
+    export const parse: (value: unknown) => Interface;
+    export {};
 }

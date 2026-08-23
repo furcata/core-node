@@ -88,7 +88,7 @@ export declare namespace Entitlement {
          * re-claimed, and a caller collapsing the two loses the distinction between
          * "never attempted" and "attempted and did not work".
          */
-        status?: Status;
+        status?: Status | null;
         /**
          * Stable identity of the entitlement being conferred, independent of which
          * purchase attempt conferred it.
@@ -97,7 +97,7 @@ export declare namespace Entitlement {
          * value here, which is what lets a duplicate be recognised as a duplicate
          * rather than as a second purchase.
          */
-        entitlement?: string;
+        entitlement?: string | null;
         /**
          * Token identifying the delivery that currently holds the claim.
          *
@@ -105,7 +105,7 @@ export declare namespace Entitlement {
          * delivery that lost its claim cannot write the outcome of work another
          * delivery has since completed.
          */
-        ownerToken?: string;
+        ownerToken?: string | null;
     }
     /**
      * Runtime schema producing {@link Interface}.
@@ -126,11 +126,11 @@ export declare namespace Entitlement {
         price: z.ZodString;
         source: z.ZodString;
         type: z.ZodEnum<typeof Price.Type>;
-        status: z.ZodOptional<z.ZodEnum<typeof Status>>;
-        entitlement: z.ZodOptional<z.ZodString>;
-        ownerToken: z.ZodOptional<z.ZodString>;
-        id: z.ZodOptional<z.ZodString>;
-        backup: z.ZodOptional<z.ZodBoolean>;
+        status: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof Status>>>;
+        entitlement: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        ownerToken: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        backup: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
         created: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         updated: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         expiry: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;

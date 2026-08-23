@@ -77,31 +77,31 @@ export declare namespace MessagingEvent {
         /**
          * Firestore document ID of the account that owns this messaging event.
          */
-        account?: string;
+        account?: string | null;
         /**
          * Identifier of the messaging service (e.g., Twilio Messaging Service SID)
          * used to deliver this event.
          */
-        service?: string;
+        service?: string | null;
         /**
          * BCP 47 language tag for the message body (e.g., `"en"`, `"es"`), used
          * for content moderation and ML processing.
          */
-        language?: string;
+        language?: string | null;
         /**
          * Array of media attachment URLs associated with this message (MMS only).
          */
-        media?: string[];
+        media?: string[] | null;
         /**
          * Plain-text body of the message.
          */
-        body?: string;
+        body?: string | null;
         /**
          * Channel type of this event; see {@link Type} for accepted values.
          * Accepts a typed enum member or a raw string for forward-compatibility
          * with values stored in Firestore before this enum existed.
          */
-        type?: Type | string;
+        type?: Type | string | null;
         /**
          * Firebase Auth UID of the user who originated this event, or `null` for
          * system-generated events.
@@ -110,15 +110,15 @@ export declare namespace MessagingEvent {
         /**
          * When `true`, this event was processed by the machine-learning pipeline.
          */
-        ml?: boolean;
+        ml?: boolean | null;
         /**
          * When `true`, the ML pipeline flagged this message content as unsafe.
          */
-        unsafe?: boolean;
+        unsafe?: boolean | null;
         /**
          * Content classification labels applied by the ML safety classifier.
          */
-        labels?: string[];
+        labels?: string[] | null;
         /**
          * Human-readable error message if delivery failed, or `null` if no error
          * occurred.
@@ -128,7 +128,7 @@ export declare namespace MessagingEvent {
          * Provider-specific error code returned by the downstream messaging
          * provider (e.g., a Twilio error code integer or string).
          */
-        errorCodeProvider?: number | string;
+        errorCodeProvider?: number | string | null;
         /**
          * Snapshot of the sender's public profile at the time this event was
          * created; used for display purposes without a secondary Firestore lookup.
@@ -137,33 +137,33 @@ export declare namespace MessagingEvent {
             /**
              * URL to the sender's avatar image.
              */
-            avatar?: string;
+            avatar?: string | null;
             /**
              * Sender's first name.
              */
-            firstName?: string;
+            firstName?: string | null;
             /**
              * Sender's last name.
              */
-            lastName?: string;
+            lastName?: string | null;
             /**
              * Sender's full display name.
              */
-            name?: string;
+            name?: string | null;
             /**
              * Abbreviated form of the sender's name (e.g., initials) for compact UI.
              */
-            abbr?: string;
+            abbr?: string | null;
             /**
              * Sender's unique username handle.
              */
-            username?: string;
+            username?: string | null;
             /**
              * Firebase Auth UID of the sender; required for all user-originated
              * events.
              */
             id: string;
-        };
+        } | null;
     }
     /**
      * Runtime schema producing {@link Interface}.
@@ -185,29 +185,29 @@ export declare namespace MessagingEvent {
      * survives a parse and a round-trip untouched.
      */
     const Schema: z.ZodObject<{
-        account: z.ZodOptional<z.ZodString>;
-        service: z.ZodOptional<z.ZodString>;
-        language: z.ZodOptional<z.ZodString>;
-        media: z.ZodOptional<z.ZodArray<z.ZodString>>;
-        body: z.ZodOptional<z.ZodString>;
-        type: z.ZodOptional<z.ZodUnion<readonly [z.ZodEnum<typeof Type>, z.ZodString]>>;
+        account: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        service: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        language: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+        body: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        type: z.ZodOptional<z.ZodNullable<z.ZodUnion<readonly [z.ZodEnum<typeof Type>, z.ZodString]>>>;
         uid: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        ml: z.ZodOptional<z.ZodBoolean>;
-        unsafe: z.ZodOptional<z.ZodBoolean>;
-        labels: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        ml: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
+        unsafe: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
+        labels: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
         error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        errorCodeProvider: z.ZodOptional<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>;
-        user: z.ZodOptional<z.ZodObject<{
-            avatar: z.ZodOptional<z.ZodString>;
-            firstName: z.ZodOptional<z.ZodString>;
-            lastName: z.ZodOptional<z.ZodString>;
-            name: z.ZodOptional<z.ZodString>;
-            abbr: z.ZodOptional<z.ZodString>;
-            username: z.ZodOptional<z.ZodString>;
+        errorCodeProvider: z.ZodOptional<z.ZodNullable<z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>>>;
+        user: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            avatar: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            firstName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            lastName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            name: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            abbr: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            username: z.ZodOptional<z.ZodNullable<z.ZodString>>;
             id: z.ZodString;
-        }, z.core.$loose>>;
-        id: z.ZodOptional<z.ZodString>;
-        backup: z.ZodOptional<z.ZodBoolean>;
+        }, z.core.$loose>>>;
+        id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        backup: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
         created: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         updated: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         expiry: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;

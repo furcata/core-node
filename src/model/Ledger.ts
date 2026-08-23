@@ -77,7 +77,7 @@ export namespace Ledger {
      * "settled at zero". A caller that collapses the two with `?? 0` will treat
      * an outstanding reservation as a completed no-op and release it.
      */
-    consumed?: number;
+    consumed?: number | null;
     /**
      * Allowance this scope was seeded from, recorded for observability.
      *
@@ -96,7 +96,7 @@ export namespace Ledger {
      * spend that actually happened. Absent or `false` both mean "not confirmed" —
      * a record is only confirmed when this is explicitly `true`.
      */
-    spendConfirmed?: boolean;
+    spendConfirmed?: boolean | null;
   }
 
   /**
@@ -129,15 +129,15 @@ export namespace Ledger {
     /**
      * See {@link Interface.consumed}.
      */
-    consumed: nonNegativeNumber().optional(),
+    consumed: nonNegativeNumber().nullish(),
     /**
      * See {@link Interface.limit}.
      */
-    limit: nonNegativeNumber().nullable().optional(),
+    limit: nonNegativeNumber().nullish(),
     /**
      * See {@link Interface.spendConfirmed}.
      */
-    spendConfirmed: z.boolean().optional(),
+    spendConfirmed: z.boolean().nullish(),
   });
 
   /**

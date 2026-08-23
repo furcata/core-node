@@ -24,41 +24,41 @@ export interface BasePlaceData {
   /**
    * GeoJSON-style `[longitude, latitude]` coordinate pair for the place.
    */
-  location?: number[];
+  location?: number[] | null;
   /**
    * Google Places API place identifier for the location.
    */
-  placeId?: string;
+  placeId?: string | null;
   /**
    * Decimal degrees latitude of the place.
    */
-  latitude?: number;
+  latitude?: number | null;
   /**
    * Decimal degrees longitude of the place.
    */
-  longitude?: number;
+  longitude?: number | null;
   /**
    * Human-readable display name for the place.
    */
-  placeName?: string;
+  placeName?: string | null;
   /**
    * UTC offset in minutes for the place's local timezone.
    */
-  utcOffset?: number;
+  utcOffset?: number | null;
   /**
    * ISO 3166-1 alpha-2 country code (e.g., `"US"`, `"CA"`).
    */
-  country?: string;
+  country?: string | null;
   /**
    * Geohash string encoding the place's latitude/longitude for efficient
    * proximity queries in Firestore.
    */
-  geohash?: string;
+  geohash?: string | null;
   /**
    * Administrative region/state/province name, also known as the geographic
    * area designation.
    */
-  area?: string; // AKA: region
+  area?: string | null; // AKA: region
 }
 
 /**
@@ -102,42 +102,42 @@ export const basePlaceDataShape = {
    * unconstrained: the published type is `number[]`, and rejecting a stored
    * array of another length would narrow it.
    */
-  location: z.array(z.number()).optional(),
+  location: z.array(z.number()).nullish(),
   /**
    * See {@link BasePlaceData.placeId}.
    */
-  placeId: nonEmptyString().optional(),
+  placeId: nonEmptyString().nullish(),
   /**
    * See {@link BasePlaceData.latitude}.
    */
-  latitude: latitudeDegrees().optional(),
+  latitude: latitudeDegrees().nullish(),
   /**
    * See {@link BasePlaceData.longitude}.
    */
-  longitude: longitudeDegrees().optional(),
+  longitude: longitudeDegrees().nullish(),
   /**
    * See {@link BasePlaceData.placeName}.
    */
-  placeName: nonEmptyString().optional(),
+  placeName: nonEmptyString().nullish(),
   /**
    * See {@link BasePlaceData.utcOffset}.
    */
-  utcOffset: utcOffsetMinutes().optional(),
+  utcOffset: utcOffsetMinutes().nullish(),
   /**
    * See {@link BasePlaceData.country}. Accepted as any non-empty string rather
    * than a two-letter code: the field is documented as ISO 3166-1 alpha-2, but
    * narrowing a published field to a fixed length would reject any stored
    * document that predates that convention.
    */
-  country: nonEmptyString().optional(),
+  country: nonEmptyString().nullish(),
   /**
    * See {@link BasePlaceData.geohash}.
    */
-  geohash: nonEmptyString().optional(),
+  geohash: nonEmptyString().nullish(),
   /**
    * See {@link BasePlaceData.area}.
    */
-  area: nonEmptyString().optional(),
+  area: nonEmptyString().nullish(),
 };
 
 /**
@@ -172,11 +172,11 @@ export interface PlaceData {
    * ISO 8601 timestamp string recorded when this place document was first
    * created; required for auditing.
    */
-  created?: string; // Required - timestamp
+  created?: string | null; // Required - timestamp
   /**
    * Unique Firestore document identifier for this place; required for lookups.
    */
-  id?: string; // Required
+  id?: string | null; // Required
   /**
    * Short administrative area (region/state) name, or `null` if unavailable.
    */
@@ -188,7 +188,7 @@ export interface PlaceData {
   /**
    * Numeric identifiers for parent area documents used in hierarchical queries.
    */
-  areas?: number[];
+  areas?: number[] | null;
   /**
    * Short city name, or `null` if unavailable.
    */
@@ -208,16 +208,16 @@ export interface PlaceData {
   /**
    * Decimal degrees latitude; required for geospatial queries.
    */
-  latitude?: number; // Required
+  latitude?: number | null; // Required
   /**
    * Decimal degrees longitude; required for geospatial queries.
    */
-  longitude?: number; // Required
+  longitude?: number | null; // Required
   /**
    * When `true`, indicates this place is local/domestic relative to the
    * primary operating region; required for filtering.
    */
-  local?: boolean; // Required
+  local?: boolean | null; // Required
   /**
    * Full display name of the place, or `null` if unavailable.
    */
@@ -241,27 +241,27 @@ export interface PlaceData {
   /**
    * UTC offset in minutes for the place's timezone; required for scheduling.
    */
-  timeOffset?: number; // Required
+  timeOffset?: number | null; // Required
   /**
    * IANA timezone identifier (e.g., `"America/New_York"`); required for
    * accurate local-time calculations.
    */
-  timeZoneId?: string; // Required
+  timeZoneId?: string | null; // Required
   /**
    * Human-readable timezone name (e.g., `"Eastern Standard Time"`); required
    * for display purposes.
    */
-  timeZoneName?: string; // Required
+  timeZoneName?: string | null; // Required
   /**
    * Administrative level of this place as categorised by {@link PlaceType};
    * required for hierarchical filtering.
    */
-  type?: PlaceType; // Required
+  type?: PlaceType | null; // Required
   /**
    * ISO 8601 timestamp string recorded the last time this document was
    * modified; required for cache invalidation.
    */
-  updated?: string; // Required - timestamp
+  updated?: string | null; // Required - timestamp
   /**
    * Public URL for this place on an external directory or maps service, or
    * `null` if unavailable.
@@ -285,7 +285,7 @@ export interface PlaceData {
       latitude: number;
       longitude: number;
     };
-  };
+  } | null;
 }
 
 /**
@@ -314,108 +314,108 @@ export const placeDataShape = {
   /**
    * See {@link PlaceData.created}.
    */
-  created: nonEmptyString().optional(),
+  created: nonEmptyString().nullish(),
   /**
    * See {@link PlaceData.id}.
    */
-  id: nonEmptyString().optional(),
+  id: nonEmptyString().nullish(),
   /**
    * See {@link PlaceData.area}.
    */
-  area: z.string().nullable().optional(),
+  area: z.string().nullish(),
   /**
    * See {@link PlaceData.areaLong}.
    */
-  areaLong: z.string().nullable().optional(),
+  areaLong: z.string().nullish(),
   /**
    * See {@link PlaceData.areas}.
    */
-  areas: z.array(z.number()).optional(),
+  areas: z.array(z.number()).nullish(),
   /**
    * See {@link PlaceData.city}.
    */
-  city: z.string().nullable().optional(),
+  city: z.string().nullish(),
   /**
    * See {@link PlaceData.cityLong}.
    */
-  cityLong: z.string().nullable().optional(),
+  cityLong: z.string().nullish(),
   /**
    * See {@link PlaceData.country}.
    */
-  country: z.string().nullable().optional(),
+  country: z.string().nullish(),
   /**
    * See {@link PlaceData.countryLong}.
    */
-  countryLong: z.string().nullable().optional(),
+  countryLong: z.string().nullish(),
   /**
    * See {@link PlaceData.latitude}.
    */
-  latitude: latitudeDegrees().optional(),
+  latitude: latitudeDegrees().nullish(),
   /**
    * See {@link PlaceData.longitude}.
    */
-  longitude: longitudeDegrees().optional(),
+  longitude: longitudeDegrees().nullish(),
   /**
    * See {@link PlaceData.local}.
    */
-  local: z.boolean().optional(),
+  local: z.boolean().nullish(),
   /**
    * See {@link PlaceData.longName}.
    */
-  longName: z.string().nullable().optional(),
+  longName: z.string().nullish(),
   /**
    * See {@link PlaceData.name}.
    */
-  name: z.string().nullable().optional(),
+  name: z.string().nullish(),
   /**
    * See {@link PlaceData.postalCode}. Numeric rather than string by declaration;
    * a postal code supplied as text is rejected here rather than coerced, because
    * `Number('SW1A')` is `NaN` and a `NaN` postal code matches nothing while
    * looking like a value.
    */
-  postalCode: z.number().nullable().optional(),
+  postalCode: z.number().nullish(),
   /**
    * See {@link PlaceData.state}.
    */
-  state: z.string().nullable().optional(),
+  state: z.string().nullish(),
   /**
    * See {@link PlaceData.stateLong}.
    */
-  stateLong: z.string().nullable().optional(),
+  stateLong: z.string().nullish(),
   /**
    * See {@link PlaceData.timeOffset}.
    */
-  timeOffset: utcOffsetMinutes().optional(),
+  timeOffset: utcOffsetMinutes().nullish(),
   /**
    * See {@link PlaceData.timeZoneId}.
    */
-  timeZoneId: nonEmptyString().optional(),
+  timeZoneId: nonEmptyString().nullish(),
   /**
    * See {@link PlaceData.timeZoneName}.
    */
-  timeZoneName: nonEmptyString().optional(),
+  timeZoneName: nonEmptyString().nullish(),
   /**
    * See {@link PlaceData.type}. Constrained to {@link PlaceType}, so an
    * unrecognised administrative level is rejected instead of being asserted into
    * the enum by a cast.
    */
-  type: z.enum(PlaceType).optional(),
+  type: z.enum(PlaceType).nullish(),
   /**
    * See {@link PlaceData.updated}.
    */
-  updated: nonEmptyString().optional(),
+  updated: nonEmptyString().nullish(),
   /**
    * See {@link PlaceData.url}.
    */
-  url: z.string().nullable().optional(),
+  url: z.string().nullish(),
   /**
    * See {@link PlaceData.vicinity}.
    */
-  vicinity: z.string().nullable().optional(),
+  vicinity: z.string().nullish(),
   /**
    * See {@link PlaceData.viewport}.
    */
-  viewport: viewportCornerBoxSchema().optional(),
+  viewport: viewportCornerBoxSchema().nullish(),
 };
 
 /**

@@ -108,7 +108,7 @@ export namespace MessageUsage {
      * harmless when the read genuinely succeeded — which is exactly the case a
      * caller cannot distinguish without validating first.
      */
-    reported?: number;
+    reported?: number | null;
     /**
      * An in-flight report awaiting acknowledgement; see {@link Pending}.
      *
@@ -116,7 +116,7 @@ export namespace MessageUsage {
      * handed to the provider, and it must be re-sent verbatim rather than
      * recomputed.
      */
-    pending?: Pending;
+    pending?: Pending | null;
   }
 
   /**
@@ -174,11 +174,11 @@ export namespace MessageUsage {
      * See {@link Interface.reported}. A watermark, so it never decreases and is
      * never negative.
      */
-    reported: nonNegativeNumber().optional(),
+    reported: nonNegativeNumber().nullish(),
     /**
      * See {@link Interface.pending}.
      */
-    pending: pendingSchema.optional(),
+    pending: pendingSchema.nullish(),
   });
 
   /**

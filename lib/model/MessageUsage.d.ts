@@ -97,7 +97,7 @@ export declare namespace MessageUsage {
          * harmless when the read genuinely succeeded — which is exactly the case a
          * caller cannot distinguish without validating first.
          */
-        reported?: number;
+        reported?: number | null;
         /**
          * An in-flight report awaiting acknowledgement; see {@link Pending}.
          *
@@ -105,7 +105,7 @@ export declare namespace MessageUsage {
          * handed to the provider, and it must be re-sent verbatim rather than
          * recomputed.
          */
-        pending?: Pending;
+        pending?: Pending | null;
     }
     /**
      * Runtime schema producing {@link Interface}.
@@ -123,16 +123,16 @@ export declare namespace MessageUsage {
     const Schema: z.ZodObject<{
         period: z.ZodString;
         token: z.ZodString;
-        reported: z.ZodOptional<z.ZodNumber>;
-        pending: z.ZodOptional<z.ZodObject<{
+        reported: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        pending: z.ZodOptional<z.ZodNullable<z.ZodObject<{
             identifier: z.ZodString;
             from: z.ZodNumber;
             to: z.ZodNumber;
             delta: z.ZodNumber;
             firstAttemptedAt: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
-        }, z.core.$loose>>;
-        id: z.ZodOptional<z.ZodString>;
-        backup: z.ZodOptional<z.ZodBoolean>;
+        }, z.core.$loose>>>;
+        id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        backup: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
         created: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         updated: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         expiry: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;

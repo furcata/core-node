@@ -17,21 +17,21 @@ export interface MessageQueue {
      * Number of messages that have been created but not yet validated or approved
      * for sending.
      */
-    pending?: number;
+    pending?: number | null;
     /**
      * Number of messages that have passed validation and are ready to be picked
      * up by the sender worker.
      */
-    ready?: number;
+    ready?: number | null;
     /**
      * Number of messages currently assigned to a sender worker for processing.
      */
-    sender?: number;
+    sender?: number | null;
     /**
      * Number of messages actively being transmitted to the downstream messaging
      * provider (e.g., Twilio).
      */
-    sending?: number;
+    sending?: number | null;
     /**
      * Arbitrary snapshot or metadata captured at the time the queue was last
      * counted; used for auditing and diagnostics.
@@ -53,19 +53,19 @@ export declare const messageQueueShape: {
     /**
      * See {@link MessageQueue.pending}.
      */
-    pending: z.ZodOptional<z.ZodNumber>;
+    pending: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     /**
      * See {@link MessageQueue.ready}.
      */
-    ready: z.ZodOptional<z.ZodNumber>;
+    ready: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     /**
      * See {@link MessageQueue.sender}.
      */
-    sender: z.ZodOptional<z.ZodNumber>;
+    sender: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     /**
      * See {@link MessageQueue.sending}.
      */
-    sending: z.ZodOptional<z.ZodNumber>;
+    sending: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     /**
      * See {@link MessageQueue.counted}. Deliberately open: the field is declared
      * as an arbitrary diagnostic snapshot and constraining it here would narrow a
@@ -81,10 +81,10 @@ export declare const messageQueueShape: {
  * the fields the schema does not name.
  */
 export declare const MessageQueueSchema: z.ZodObject<{
-    pending: z.ZodOptional<z.ZodNumber>;
-    ready: z.ZodOptional<z.ZodNumber>;
-    sender: z.ZodOptional<z.ZodNumber>;
-    sending: z.ZodOptional<z.ZodNumber>;
+    pending: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    ready: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    sender: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    sending: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     counted: z.ZodOptional<z.ZodUnknown>;
 }, z.core.$loose>;
 /**
