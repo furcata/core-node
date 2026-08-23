@@ -138,51 +138,102 @@ compiler settings**. Neither can see how a published declaration behaves for a c
 compiles more permissively — and a type-level guarantee can hold under one null-checking setting
 and be completely inert under the other.
 
-`test-consumer/` closes that. It is not a Vitest suite and it is never executed: the compile *is*
-the test. `tsconfig.consumer.json` compiles it against the **built `lib/*.d.ts`**, reached through
-the package's own `exports` map, with `strictNullChecks` and `noImplicitAny` **off**.
+`test-consumer/` closes that. It is not a Vitest suite and is never executed: the compile *is* the
+test. Two projects, two jobs:
 
-Conventions, which differ from `test/`:
+| project | script | fixture | must |
+|---|---|---|---|
+| `tsconfig.consumer.json` | `npm run typecheck:consumer` | `*.consumer-unguarded.ts` (and everything else) | exit `0`, meaning every `@ts-expect-error` was needed |
+| `tsconfig.consumer-control.json` | `npm run typecheck:consumer:control` | `*.consumer-guarded.ts` only | exit `0` **always** |
 
-- **Mirror the source path** as elsewhere: `src/interface/schema.ts` →
-  `test-consumer/interface/schema.consumer-types.ts`. The `.consumer-types.ts` suffix keeps the
-  files out of Vitest's collection globs.
-- **Import by package name**, not by relative path:
-  `import {type ParseResult} from '@furcata/core-node/interface';`. The self-name import resolves
-  through `exports` to the shipped declaration. A relative import of `src/` would test a file
-  consumers never receive. Verified with `tsc --listFiles`: only `lib/interface/*.d.ts` and the
-  fixture are compiled, no file from `src/`.
-- **Negative cases use `@ts-expect-error` with a description.** That makes them self-proving — if
-  the guarantee breaks the expected error disappears, the directive goes unused, and `tsc` fails
-  with `TS2578`. It fails when the guarantee breaks *and* when it stops being tested.
-- **Every negative is paired with a narrowed positive**, so a type that is merely unusable cannot
-  satisfy the negative.
-- **Keep the inert same-shape controls.** They carry no directive and must compile clean; they are
-  the proof the settings are genuinely permissive, and they make the config self-pinning.
+Both compile against the **built `lib/*.d.ts`**, reached through the package's own `exports` map,
+with `strictNullChecks` and `noImplicitAny` **off**. The control project `extends` the gate's own
+project and overrides nothing but `include`, so their settings cannot drift apart.
+
+### Why there are two projects
+
+**A negative assertion is evidence only if the harness that produced it works.** "The un-narrowed
+read failed to compile" is produced just as readily by a fixture that cannot compile *at all*, and
+both ways of getting there are live in this repository — measured, not supposed:
+
+- **`TS5112`** — *"tsconfig.json is present but will not be loaded if files are specified on
+  commandline"* — fires **before any type analysis**. `tsc --noEmit somefile.ts` here exits `1`
+  with exactly that and checks nothing. This is why the gate is a `-p` project and must stay one;
+  `--ignoreConfig` is the other way out, and the project form needs no escape hatch.
+- **`TS2307`** — the `exports` map exposes only `./model` and `./interface`, so a deep path like
+  `@furcata/core-node/lib/interface/schema.js` does not resolve. Exits `2`, and every read in the
+  file fails alike because the type is unresolvable.
+
+Either one makes the un-narrowed **and** narrowed reads fail together, which reads as a confirmed
+guarantee. So the required evidence is **three observations, not two**, and the two exit codes are
+read together:
+
+- gate red, control green → **a guarantee regressed.** Fix the type.
+- gate red, control red → **the harness broke.** The gate proves nothing until it is repaired.
+
+### Conventions, which differ from `test/`
+
+- **Mirror the source path**, as elsewhere: `src/interface/schema.ts` →
+  `test-consumer/interface/schema.consumer-{guarded,unguarded}.ts`. The suffixes keep the files out
+  of Vitest's collection globs.
+- **Import by package subpath**, never a relative path:
+  `import {type ParseResult} from '@furcata/core-node/interface';`. That resolves through `exports`
+  to the shipped declaration, and it is what real consumer code writes. Verified with
+  `tsc --listFiles`: only `lib/interface/*.d.ts` and the fixture compile, no file from `src/`.
+- **Negative cases use `@ts-expect-error` with a description**, and each is answered by a narrowed
+  positive in the guarded file, so a type that is merely unusable cannot satisfy the negative.
+- **Read shallow when the guarantee is property absence** — see §6.1, this is the subtle one.
+- **Keep the inert same-shape controls.** They carry no directive and must compile clean. They are
+  what makes the config self-pinning: a permissive gate's failure mode is quietly **becoming a
+  duplicate of the gate it was meant to complement**, and two green gates look exactly like two
+  passes. A control that breaks when the config drifts strict makes that divergence
+  self-announcing.
 - **Fixtures must be obviously synthetic.** This repository is public.
 
-Mutation-validated as §4 requires, with a 2×2 rather than a single cell — because the obvious
-one-cell experiment gives the wrong answer and would have been reported as a success:
+### 6.1 `@ts-expect-error` is satisfied by *any* error, including the wrong one
 
-| `ParseFailure` | strict assertion form in `test/` | `npm run typecheck` | `npm run typecheck:consumer` |
-|---|---|---|---|
-| property omitted (as shipped) | shallow `result.data` | green `0` | green `0` |
-| `data?: undefined` | shallow `result.data` | **red `2`** | **red `2`** |
-| property omitted (as shipped) | deep `result.data.amount` | green `0` | green `0` |
-| `data?: undefined` | deep `result.data.amount` | **green `0`** | **red `2`** |
+This is the trap one layer above the harness-liveness rule, and it is easy to walk into because the
+wrong form looks like the better assertion.
 
-Row 2 is why "reintroduce the marker and watch only the new gate fail" does not work here: the
-existing assertions read the **shallow** property, and `Property 'data' does not exist` fires under
-every setting, so the strict gate catches that mutation too. Row 4 is the divergence. Deepening the
-read to `result.data.amount` — the natural way to write it, and what the guarantee is actually
-about — leaves the strict gate green under the marker, because `TS18048` keeps its directive used.
-Only the consumer gate reports `TS2578`. Row 3 is the control that rules out "the deep test is
-simply broken". The identical 2×2 on `member?: undefined` and `MemberMiss` behaves the same way,
-failing the fixture's other two directives.
+> When the guarantee is **property absence**, read **shallow** (`r.data`). A deep read
+> (`r.data.amount`) admits a **substitute error**: as the type weakens, the error merely changes
+> identity — `TS2339` → `TS18048` — the directive stays *used*, and the gate passes while protecting
+> nobody.
+
+The assertion silently degrades from *"the property is absent"* to *"the property is possibly
+undefined"*, and nothing can tell. Absences and failures are both cheap to manufacture, so neither
+is a finish condition on its own: check **which** error you are suppressing, not merely that one
+occurred. Verified for the four directives here by stripping them and reading the diagnostics — all
+four are `TS2339`.
+
+The consumer fixture reads deep on purpose, because there `TS18048` cannot arise: with
+`strictNullChecks` off there is no possibly-undefined error to substitute in, so a weakened type
+produces no error at all and the directive goes unused. That asymmetry is the whole divergence.
+
+### 6.2 Mutation validation, measured
+
+Validated with a 2×2 rather than a single cell, because **the obvious one-cell experiment gives the
+wrong answer and would have been reported as a success**:
+
+| `ParseFailure` | strict assertion form in `test/` | `npm run typecheck` | `typecheck:consumer` | `typecheck:consumer:control` |
+|---|---|---|---|---|
+| property omitted (as shipped) | shallow `result.data` | green `0` | green `0` | green `0` |
+| `data?: undefined` | shallow `result.data` | **red `2`** | **red `2`** | green `0` |
+| property omitted (as shipped) | deep `result.data.amount` | green `0` | green `0` | green `0` |
+| `data?: undefined` | deep `result.data.amount` | **green `0`** | **red `2`** | green `0` |
+
+Row 2 is why "reintroduce the marker and watch only the new gate fail" does not work: the existing
+assertions read the **shallow** property, and `Property 'data' does not exist` fires under every
+setting, so the strict gate catches that mutation too. **Row 4 is the divergence** — and the control
+column is what makes it evidence rather than a coincidence, since a dead harness would have shown
+red there too. Row 3 rules out "the deep test is simply broken". The identical 2×2 on
+`member?: undefined` and `MemberMiss` behaves the same way and fails the fixture's other two
+directives.
 
 So the strict gate's coverage of this class is **incidental to how one line was phrased**; the
-consumer gate's is structural. All four `@ts-expect-error` directives in the fixture have been
-observed failing under the mutation they exist to catch — none of them is vacuous.
+consumer gate's is structural. All four `@ts-expect-error` directives have been observed failing
+under the mutation they exist to catch, each with the control green in the same state — none is
+vacuous.
 
 The rule this enforces is in
 [`serialized-models.instructions.md`](serialized-models.instructions.md) §8.

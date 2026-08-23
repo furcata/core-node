@@ -156,9 +156,10 @@ The trap is not the rule, it is that **nothing in a strict repository can show y
 The strict gate passes identically for both shapes above, so the precondition — "the consumer
 shares our settings" — stays unspoken until it silently stops being true.
 
-`npm run typecheck:consumer` is what closes that. It compiles fixtures in `test-consumer/` against
-the **built `lib/*.d.ts`**, reached through the package's own `exports` map, with `strictNullChecks`
-and `noImplicitAny` **off**. Add a case there whenever you add a type-level guarantee:
+`npm run typecheck:consumer` is what closes that, with `npm run typecheck:consumer:control` as its
+liveness proof. Both compile fixtures in `test-consumer/` against the **built `lib/*.d.ts`**,
+reached through the package's own `exports` map, with `strictNullChecks` and `noImplicitAny`
+**off**. Add a case there whenever you add a type-level guarantee:
 
 - express the negative with `@ts-expect-error` **plus a description** — if the guarantee breaks, the
   expected error stops occurring, the directive goes unused, and the compile fails with `TS2578`;
@@ -174,9 +175,25 @@ and `noImplicitAny` **off**. Add a case there whenever you add a type-level guar
   strictness and the control errors rather than quietly turning the gate into a copy of the strict
   one.
 
-One consumer-visible consequence worth knowing, measured rather than assumed: where
-`strictNullChecks` is off, **negative narrowing of a boolean discriminant does not fire** — every
-type includes `undefined` there, so the truthy branch cannot be excluded. `r.ok ? … : r.err` and
-`if (r.ok) {} else { … }` leave the value un-narrowed for such a consumer; `r.ok === false`,
-`r.ok === true` and `in` narrow under both settings. Design discriminated results so the failure
-branch is reachable with the explicit comparison, and say so in the JSDoc.
+### The narrowing consequence, which a consumer cannot see from the type
+
+Measured rather than assumed: where `strictNullChecks` is off, **negative narrowing of a boolean
+discriminant does not fire at all** — every type includes `undefined` there, so the truthy branch
+cannot be excluded. `r.ok ? … : r.err` and `if (r.ok) {} else { … }` leave the value un-narrowed
+for such a consumer; `r.ok === false`, `r.ok === true` and `in` narrow under both settings.
+
+Treat this as a design constraint, not trivia. The bare form **compiles, lints and tests green**;
+what it silently removes is the discrimination the discriminated result exists to provide. Reading
+a missing field does not throw either — a numeric payload field read off an un-narrowed result
+yields `undefined`, which propagates as `NaN` or takes a default branch, so a *failed* result can
+flow onward into a computation with the compiler's blessing. That is the defect a parse boundary is
+built to remove, reintroduced by the idiomatic spelling.
+
+So: design discriminated results so the failure branch is reachable with the explicit comparison,
+and **say so in the JSDoc on the type itself** — with the conversion table, as `ParseResult` and
+`MemberResult` now carry. It is a property of the consumer's compiler rather than of the shape, so
+there is nowhere else a consumer could learn it.
+
+Do not, however, *assert* it in `test-consumer/`. It is the consumer's compiler, not this package's
+contract, and a future TypeScript could legitimately change it — an `@ts-expect-error` on it would
+one day go red for a reason that is nobody's regression.

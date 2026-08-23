@@ -194,6 +194,7 @@ Any update to the root `README.MD` must:
 | Test (CI mode) | `npm test` (`vitest run`) |
 | **Typecheck (required)** | `npm run typecheck` (`tsc -p ./tsconfig.test.json`) |
 | **Consumer-conditions typecheck (required)** | `npm run typecheck:consumer` (`tsc -p ./tsconfig.consumer.json`) — build first |
+| **Consumer-conditions control (required)** | `npm run typecheck:consumer:control` (`tsc -p ./tsconfig.consumer-control.json`) — must always be `0` |
 | Test (direct / watch / coverage) | `npx vitest run` · `npx vitest` · `npx vitest run --coverage` |
 | Private-marker check | `./.github/scripts/check-private-markers.sh` |
 | Build-output drift check | `npm run build && git status --porcelain -- lib/` (must be empty) |
@@ -213,8 +214,14 @@ Any update to the root `README.MD` must:
 > `test-consumer/` against the **built `lib/*.d.ts`**, through the package's own `exports` map, with
 > those flags off. Run `npm run build` first; it reads compiled output, not `src/`. The rule it
 > enforces is in `.github/instructions/serialized-models.instructions.md` §8.
+>
+> Read it together with `npm run typecheck:consumer:control`, which compiles only the fixture whose
+> every line must compile. A negative assertion is evidence only if the harness works, and a fixture
+> that cannot compile at all fails its un-narrowed *and* narrowed reads alike — which reads as a
+> confirmed guarantee. **Gate red + control green** means a guarantee regressed; **gate red + control
+> red** means the harness broke and the gate proves nothing.
 
 > **CI gate:** `.github/workflows/nodejs.yml` runs on `push`/`pull_request` to `main` across Node
 > `22.x` and `24.x`, executing `npm ci` → `npm run build` → build-output drift check →
-> private-marker check → `npm test` → `npm run typecheck` → `npm run typecheck:consumer`. Changes
-> must keep all of these green.
+> private-marker check → `npm test` → `npm run typecheck` → `npm run typecheck:consumer` →
+> `npm run typecheck:consumer:control`. Changes must keep all of these green.

@@ -209,6 +209,43 @@ export interface ParseFailure {
  * Narrow on `success` to reach the data; there is no branch that offers both a
  * typed document and an unverified one.
  *
+ * ## 🔴 Narrow with `=== false`, not with `else`
+ *
+ * Write `result.success === false`, `result.success === true` or an `in` test.
+ * **Do not** rely on `result.success ? … : …` or the `else` of
+ * `if (result.success)` to reach the failure branch.
+ *
+ * This is not style. Where `strictNullChecks` is off — which this package no
+ * longer does but a consumer may — **negative narrowing of a boolean
+ * discriminant does not fire at all.** Every type includes `undefined` under
+ * that setting, so the success branch cannot be excluded by a falsy test and
+ * the value stays un-narrowed in the branch where it should have been a
+ * failure. Measured against this package's own built declarations; the
+ * conversion is:
+ *
+ * | form | `strictNullChecks` on | off |
+ * |---|---|---|
+ * | `r.success === false` | narrows | **narrows** |
+ * | `r.success === true` | narrows | **narrows** |
+ * | `'issues' in r` | narrows | **narrows** |
+ * | `r.success ? a : b` (false arm) | narrows | **does not narrow** |
+ * | `!r.success` | narrows | **does not narrow** |
+ * | `if (r.success) {} else {}` | narrows | **does not narrow** |
+ *
+ * The reason this is worth a warning rather than a footnote is the failure
+ * mode. The bare form **compiles, lints and tests green**; what it silently
+ * removes is the discrimination this whole module exists to provide. And
+ * reading a missing field does not throw — a numeric payload field read off an
+ * un-narrowed result yields `undefined`, which propagates as `NaN` or takes a
+ * default branch, so a *failed* parse can flow onward into a computation with
+ * the compiler's blessing. That is the exact defect the parse boundary was
+ * built to remove, reintroduced by the idiomatic spelling.
+ *
+ * A consumer cannot discover any of this from the shape of the type, which is
+ * why it is documented here rather than left to be found. `npm run
+ * typecheck:consumer` compiles the built declarations under the permissive
+ * setting so the portable form stays exercised.
+ *
  * @template T The interface the schema produces.
  */
 export type ParseResult<T> = ParseSuccess<T> | ParseFailure;
@@ -558,6 +595,20 @@ export interface MemberMiss {
 }
 /**
  * Result of narrowing an untrusted value to a member of an enumeration.
+ *
+ * ## 🔴 Narrow with `=== false`, not with `else`
+ *
+ * Write `result.matched === false` to reach {@link MemberMiss.value}. The
+ * `else` of `if (result.matched)` and the false arm of
+ * `result.matched ? … : …` **do not narrow** where `strictNullChecks` is off;
+ * see {@link ParseResult} for the measured conversion table and why the bare
+ * form compiles, lints and tests green while removing the discrimination.
+ *
+ * It bites harder here than on a parse result. {@link MemberMatch} declares no
+ * mirroring `value?: undefined`, so unlike `issues` on a parse result there is
+ * no second route to the property — the un-narrowed read is a compile error
+ * rather than a silently wrong value, which is the better of the two failures
+ * but still surprises a caller who followed the obvious spelling.
  *
  * @template TMember The enumeration's member type.
  */

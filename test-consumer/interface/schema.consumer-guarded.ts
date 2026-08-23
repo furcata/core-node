@@ -4,69 +4,56 @@
  */
 
 /**
- * Consumer-conditions type test for `src/interface/schema.ts`.
+ * Consumer-conditions **positive control** for `src/interface/schema.ts`.
  *
- * ## What this file is
+ * ## What this file is for
  *
- * Not a Vitest suite. It has no assertions and it is never executed — the
- * whole test *is* the compile, run by `npm run typecheck:consumer` against
- * `tsconfig.consumer.json`. A pass means `tsc` reported zero errors; a failure
- * means it reported at least one, or that a `@ts-expect-error` below stopped
- * being needed.
+ * Everything here **must compile**. It is the liveness proof for its sibling
+ * `schema.consumer-unguarded.ts`, which asserts the opposite — that certain
+ * reads must *not* compile.
  *
- * ## Why it exists
+ * ## Why a separate file with its own project
  *
- * This package compiles with `strict`, `strictNullChecks` and `noImplicitAny`
- * all on. Consumers need not. A type-level guarantee can hold under one
- * null-checking setting and be **completely inert** under the other, so a
- * repository that only ever compiles under its own settings is structurally
- * incapable of noticing that a guarantee it ships protects nobody.
+ * A negative assertion is only evidence if the harness that produced it works.
+ * "The un-narrowed read failed to compile" is produced just as readily by a
+ * fixture that cannot compile *at all* — an unresolved import, a bad flag, a
+ * config that was never loaded. Every one of those makes the un-narrowed **and**
+ * narrowed reads fail together, which reads as a confirmed guarantee and is in
+ * fact a dead harness.
  *
- * The two shapes that look interchangeable, and are not:
+ * Both failure modes are live here and both were measured:
  *
- * ```ts
- * // Inert for a consumer with strictNullChecks off.
- * interface Failure { success: false; data?: undefined }
+ * - `TS5112` — *"tsconfig.json is present but will not be loaded if files are
+ *   specified on commandline"* — fires **before any type analysis**, so nothing
+ *   is checked at all. Verified: `tsc --noEmit somefile.ts` in this repository
+ *   exits `1` with exactly that error. **This is why the gate is a `-p` project
+ *   rather than a file list**, and why it must stay one. `--ignoreConfig` is the
+ *   other way out; the project form needs no escape hatch.
+ * - `TS2307` — the package's `exports` map exposes only `./model` and
+ *   `./interface`, so a deep path such as
+ *   `@furcata/core-node/lib/interface/schema.js` does not resolve. Verified:
+ *   exits `2`, and every read in the file fails alike because the type is
+ *   unresolvable. The subpath import used here is the one real consumer code
+ *   uses, so the fixture exercises the genuine path.
  *
- * // Holds either way.
- * interface Failure { success: false }
- * ```
+ * `tsconfig.consumer-control.json` compiles **only this file**, so its exit code
+ * is observable on its own. The required evidence is three observations, not
+ * two: under the mutation the assertions file must go red **while this file
+ * still exits `0`**. Both red means the harness died and the run proves nothing.
  *
- * The first rests on **null-checking**: `T | undefined` reduces to `T` when
- * `strictNullChecks` is off, so the marker collapses and the unguarded read
- * compiles cleanly, then throws at runtime. The second rests on **property
- * existence** — `Property 'data' does not exist` — which fires under every
- * setting. `ParseFailure` and `MemberMiss` are deliberately the second shape;
- * this file is what keeps them that way.
+ * That project `extends` the gate's own `tsconfig.consumer.json` and overrides
+ * nothing but `include`, so the two cannot drift apart in compiler settings —
+ * a control compiled under different flags from the thing it controls is not a
+ * control.
  *
- * ## How each direction is covered
+ * ## The inert controls
  *
- * - The `@ts-expect-error` directives carry descriptions, so they are subject
- *   to `ban-ts-comment` **and**, more importantly, they are self-proving: if a
- *   guarantee breaks, the expected error disappears, the directive becomes
- *   unused, and `tsc` fails with TS2578. The assertion therefore fails when
- *   the guarantee breaks *and* when it stops being tested.
- * - The reads below are **deep** (`.data.amount`, not `.data`), which is the
- *   runtime hazard being modelled and is what makes this file disagree with the
- *   strict gate. The mirror-image rule applies over in `test/`: the equivalent
- *   assertions there are deliberately **shallow**, because a deep read fails
- *   under strict with TS18048 even when the marker is back, which keeps that
- *   directive used and that gate green. Measured; see
- *   `.github/instructions/tests.instructions.md` §6 for the full 2×2.
- * - The `INERT CONTROL` blocks are the same-shape known-positive. They carry
- *   **no** directive and must compile clean. They are the proof that these
- *   settings really are permissive enough to miss the inert form — without
- *   them, a passing `@ts-expect-error` above could be passing for some
- *   unrelated reason. They also pin the config: restore `strictNullChecks`
- *   here and those lines start erroring, so the gate cannot be quietly
- *   defanged into a duplicate of the strict one.
- *
- * ## Why the import is a self-name import
- *
- * `@furcata/core-node/interface` resolves through this package's own `exports`
- * map to the built `lib/interface/index.d.ts` — the declaration a consumer
- * receives — rather than to `src/`. Compiling `src/` here would test a file
- * that is not the published contract.
+ * The `INERT CONTROL` blocks at the bottom pin the settings themselves. They
+ * model the shape that must never be used — a sibling `data?: undefined` marker
+ * — and they must compile clean here, which is only true because
+ * `strictNullChecks` is off. Force it on and exactly those lines error. Without
+ * them a passing assertion next door could be passing because the gate had
+ * quietly become a duplicate of the strict one.
  */
 
 import {z} from 'zod';
@@ -89,17 +76,16 @@ interface SyntheticDoc {
 }
 
 /* ------------------------------------------------------------------------ *
- * ParseResult — declared form
+ * ParseResult — narrowed reads must reach the payload
  * ------------------------------------------------------------------------ */
 
 declare const declaredParse: ParseResult<SyntheticDoc>;
 
-// @ts-expect-error ParseFailure has no `data` property at all, so reading it off an un-narrowed ParseResult must not compile even with strictNullChecks off.
-const unguardedParseRead: number = declaredParse.data.amount;
-
 /**
- * Narrowing on the discriminant must still reach the payload. Without this the
- * negative case above could be satisfied by a type that is simply unusable.
+ * The narrowed read. This is the observation that proves the harness is alive:
+ * it must exit `0` both with the guarantee intact and with it deliberately
+ * broken, so that the difference the assertions file reports is attributable to
+ * the type rather than to the fixture.
  */
 const guardedParseRead: number = declaredParse.success ? declaredParse.data.amount : 0;
 
@@ -116,7 +102,7 @@ const guardedParseRead: number = declaredParse.success ? declaredParse.data.amou
  * the positive branch when the flag is off.
  *
  * That is a property of the consumer's compiler rather than of this package's
- * types, so it is not asserted as a guarantee here — a future TypeScript could
+ * types, so it is not asserted as a guarantee — a future TypeScript could
  * legitimately change it. It is written the portable way and recorded, because
  * a caller who follows the "narrow on the discriminant" advice with the obvious
  * `else` gets a compile error that the advice does not predict.
@@ -127,14 +113,10 @@ const guardedIssuesRead: number = declaredParse.success === false ? declaredPars
  * Documented asymmetry: `ParseSuccess` declares `issues?: undefined`, so the
  * key exists on both branches and an un-narrowed read is legal by design. This
  * is only benign in this direction — a caller learns there are no issues, which
- * is true. It doubles as a resolution check: if the self-name import silently
+ * is true. It doubles as a resolution check: if the subpath import silently
  * resolved to something else, this would not compile.
  */
 const unguardedIssuesRead = declaredParse.issues;
-
-/* ------------------------------------------------------------------------ *
- * ParseResult — inferred form
- * ------------------------------------------------------------------------ */
 
 /**
  * A consumer reaches the guarded type through the helper's return type rather
@@ -145,13 +127,10 @@ const syntheticShape = z.object({amount: z.number()});
 
 const inferredParse = parseResult(syntheticShape, {amount: 1}, 'synthetic');
 
-// @ts-expect-error The inferred return of parseResult carries the same closed failure branch, so the unguarded read must not compile here either.
-const unguardedInferredRead: number = inferredParse.data.amount;
-
 const guardedInferredRead: number = inferredParse.success ? inferredParse.data.amount : 0;
 
 /* ------------------------------------------------------------------------ *
- * MemberResult
+ * MemberResult — narrowed reads must reach the member
  * ------------------------------------------------------------------------ */
 
 /**
@@ -163,9 +142,6 @@ const syntheticMembers = {
 } as const;
 
 declare const declaredMember: MemberResult<'alpha' | 'beta'>;
-
-// @ts-expect-error MemberMiss has no `member` property at all, so reading it off an un-narrowed MemberResult must not compile even with strictNullChecks off.
-const unguardedMemberRead: string = declaredMember.member;
 
 const guardedMemberRead: string = declaredMember.matched ? declaredMember.member : 'alpha';
 
@@ -179,9 +155,6 @@ const guardedMemberRead: string = declaredMember.matched ? declaredMember.member
 const guardedMissRead: unknown = declaredMember.matched === false ? declaredMember.value : undefined;
 
 const inferredMember = matchMember(syntheticMembers, 'alpha');
-
-// @ts-expect-error The inferred return of matchMember carries the same closed miss branch, so the unguarded read must not compile here either.
-const unguardedInferredMemberRead: string = inferredMember.member;
 
 const guardedInferredMemberRead: string = inferredMember.matched ? inferredMember.member : 'beta';
 
@@ -235,8 +208,8 @@ declare const inertResult: InertResult;
  * Under these consumer settings this read **must compile**, which is the whole
  * point: the marker guarantee is worth nothing here. If this line ever starts
  * erroring, `tsc` fails and the message is not "the code regressed" but "this
- * config is no longer permissive, so the assertions above prove less than they
- * claim" — the control has failed, and a control that cannot be observed
+ * config is no longer permissive, so the assertions next door prove less than
+ * they claim" — the control has failed, and a control that cannot be observed
  * failing is not a control.
  */
 const inertUnguardedRead: number = inertResult.data.amount;
@@ -279,19 +252,15 @@ const inertUnguardedMemberRead: string = inertMember.member;
 /**
  * Every binding above is referenced here so that none of them can be dropped
  * as unused by a future tool, and so the file has an export and is a module.
- * The array is never evaluated; this project compiles with `noEmit`.
+ * The array is never evaluated; these projects compile with `noEmit`.
  */
-export const consumerConditionsChecked: unknown[] = [
-  unguardedParseRead,
+export const consumerControlChecked: unknown[] = [
   guardedParseRead,
   guardedIssuesRead,
   unguardedIssuesRead,
-  unguardedInferredRead,
   guardedInferredRead,
-  unguardedMemberRead,
   guardedMemberRead,
   guardedMissRead,
-  unguardedInferredMemberRead,
   guardedInferredMemberRead,
   inertUnguardedRead,
   inertUnguardedMemberRead,

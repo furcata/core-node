@@ -1,0 +1,31 @@
+{
+  // Positive control for the consumer-conditions gate.
+  //
+  // Compiles ONLY test-consumer/interface/schema.consumer-guarded.ts, the file
+  // whose every line must compile. Its exit code is therefore observable
+  // separately from the assertions file next door, which is the whole reason
+  // this project exists.
+  //
+  // A negative assertion is evidence only if the harness that produced it
+  // works. "The un-narrowed read failed to compile" is produced just as
+  // readily by a fixture that cannot compile at all — an unresolved import
+  // (TS2307, measured: the exports map blocks deep paths), or a config that
+  // was never loaded (TS5112, measured: passing files on the command line
+  // errors before any type analysis). Both make the un-narrowed AND narrowed
+  // reads fail together, which reads as a confirmed guarantee and is a dead
+  // harness. So the required evidence is three observations, not two: under a
+  // mutation the assertions must go red WHILE this project still exits 0.
+  //
+  // Read the two exit codes together:
+  //   gate red, control green -> a guarantee regressed. Fix the type.
+  //   gate red, control red   -> the harness broke. The gate proves nothing
+  //                              until it is repaired.
+  //
+  // It `extends` the gate's own project and overrides nothing but `include`,
+  // so the two cannot drift apart in compiler settings. A control compiled
+  // under different flags from the thing it controls is not a control.
+  "extends": "./tsconfig.consumer.json",
+  "include": [
+    "test-consumer/interface/schema.consumer-guarded.ts"
+  ]
+}

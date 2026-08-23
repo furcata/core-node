@@ -143,3 +143,24 @@ jobs:
         run: npm run typecheck:consumer
         env:
           CI: true
+
+      # Positive control for the step above, and not optional.
+      #
+      # A negative assertion is evidence only if the harness that produced it
+      # works. "The un-narrowed read failed to compile" is produced just as
+      # readily by a fixture that cannot compile at all, and both failure modes
+      # are live here: TS2307, because the `exports` map exposes only `./model`
+      # and `./interface` so a deep path does not resolve; and TS5112, because
+      # passing files on the command line errors before any type analysis
+      # happens. Both were measured. Both take the un-narrowed AND the narrowed
+      # reads down together, which reads as a confirmed guarantee.
+      #
+      # This step compiles only the fixture whose every line must compile, so
+      # the two exit codes can be read together:
+      #   gate red, control green -> a guarantee regressed. Fix the type.
+      #   gate red, control red   -> the harness broke. The gate above proves
+      #                              nothing until it is repaired.
+      - name: Typecheck control (consumer harness liveness)
+        run: npm run typecheck:consumer:control
+        env:
+          CI: true
