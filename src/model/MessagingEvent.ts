@@ -90,31 +90,31 @@ export namespace MessagingEvent {
     /**
      * Firestore document ID of the account that owns this messaging event.
      */
-    account?: string;
+    account?: string | null;
     /**
      * Identifier of the messaging service (e.g., Twilio Messaging Service SID)
      * used to deliver this event.
      */
-    service?: string;
+    service?: string | null;
     /**
      * BCP 47 language tag for the message body (e.g., `"en"`, `"es"`), used
      * for content moderation and ML processing.
      */
-    language?: string;
+    language?: string | null;
     /**
      * Array of media attachment URLs associated with this message (MMS only).
      */
-    media?: string[];
+    media?: string[] | null;
     /**
      * Plain-text body of the message.
      */
-    body?: string;
+    body?: string | null;
     /**
      * Channel type of this event; see {@link Type} for accepted values.
      * Accepts a typed enum member or a raw string for forward-compatibility
      * with values stored in Firestore before this enum existed.
      */
-    type?: Type | string;
+    type?: Type | string | null;
     /**
      * Firebase Auth UID of the user who originated this event, or `null` for
      * system-generated events.
@@ -123,15 +123,15 @@ export namespace MessagingEvent {
     /**
      * When `true`, this event was processed by the machine-learning pipeline.
      */
-    ml?: boolean;
+    ml?: boolean | null;
     /**
      * When `true`, the ML pipeline flagged this message content as unsafe.
      */
-    unsafe?: boolean,
+    unsafe?: boolean | null,
     /**
      * Content classification labels applied by the ML safety classifier.
      */
-    labels?: string[],
+    labels?: string[] | null,
     /**
      * Human-readable error message if delivery failed, or `null` if no error
      * occurred.
@@ -141,7 +141,7 @@ export namespace MessagingEvent {
      * Provider-specific error code returned by the downstream messaging
      * provider (e.g., a Twilio error code integer or string).
      */
-    errorCodeProvider?: number | string;
+    errorCodeProvider?: number | string | null;
     /**
      * Snapshot of the sender's public profile at the time this event was
      * created; used for display purposes without a secondary Firestore lookup.
@@ -150,33 +150,33 @@ export namespace MessagingEvent {
       /**
        * URL to the sender's avatar image.
        */
-      avatar?: string;
+      avatar?: string | null;
       /**
        * Sender's first name.
        */
-      firstName?: string;
+      firstName?: string | null;
       /**
        * Sender's last name.
        */
-      lastName?: string;
+      lastName?: string | null;
       /**
        * Sender's full display name.
        */
-      name?: string;
+      name?: string | null;
       /**
        * Abbreviated form of the sender's name (e.g., initials) for compact UI.
        */
-      abbr?: string;
+      abbr?: string | null;
       /**
        * Sender's unique username handle.
        */
-      username?: string;
+      username?: string | null;
       /**
        * Firebase Auth UID of the sender; required for all user-originated
        * events.
        */
       id: string;
-    };
+    } | null;
   }
 
   /**
@@ -190,27 +190,27 @@ export namespace MessagingEvent {
     /**
      * See {@link Interface.user}.
      */
-    avatar: nonEmptyString().optional(),
+    avatar: nonEmptyString().nullish(),
     /**
      * Sender's first name.
      */
-    firstName: z.string().optional(),
+    firstName: z.string().nullish(),
     /**
      * Sender's last name.
      */
-    lastName: z.string().optional(),
+    lastName: z.string().nullish(),
     /**
      * Sender's full display name.
      */
-    name: z.string().optional(),
+    name: z.string().nullish(),
     /**
      * Abbreviated form of the sender's name.
      */
-    abbr: z.string().optional(),
+    abbr: z.string().nullish(),
     /**
      * Sender's unique username handle.
      */
-    username: z.string().optional(),
+    username: z.string().nullish(),
     /**
      * Firebase Auth UID of the sender.
      */
@@ -241,62 +241,62 @@ export namespace MessagingEvent {
     /**
      * See {@link Interface.account}.
      */
-    account: documentId().optional(),
+    account: documentId().nullish(),
     /**
      * See {@link Interface.service}.
      */
-    service: nonEmptyString().optional(),
+    service: nonEmptyString().nullish(),
     /**
      * See {@link Interface.language}.
      */
-    language: nonEmptyString().optional(),
+    language: nonEmptyString().nullish(),
     /**
      * See {@link Interface.media}.
      */
-    media: z.array(z.string()).optional(),
+    media: z.array(z.string()).nullish(),
     /**
      * See {@link Interface.body}. Permitted to be empty: a delivery receipt for
      * a media-only message legitimately carries no text.
      */
-    body: z.string().optional(),
+    body: z.string().nullish(),
     /**
      * See {@link Interface.type}, and the note on this schema about why a raw
      * string is still accepted.
      */
-    type: z.union([z.enum(Type), z.string()]).optional(),
+    type: z.union([z.enum(Type), z.string()]).nullish(),
     /**
      * See {@link Interface.uid}. `null` denotes a system-generated event and
      * must survive a JSON round-trip.
      */
-    uid: z.string().nullable().optional(),
+    uid: z.string().nullish(),
     /**
      * See {@link Interface.ml}.
      */
-    ml: z.boolean().optional(),
+    ml: z.boolean().nullish(),
     /**
      * See {@link Interface.unsafe}.
      */
-    unsafe: z.boolean().optional(),
+    unsafe: z.boolean().nullish(),
     /**
      * See {@link Interface.labels}.
      */
-    labels: z.array(z.string()).optional(),
+    labels: z.array(z.string()).nullish(),
     /**
      * See {@link Interface.error}. `null` denotes "no error occurred", which is
      * a different claim from the field being absent.
      */
-    error: z.string().nullable().optional(),
+    error: z.string().nullish(),
     /**
      * See {@link Interface.errorCodeProvider}. Accepted as either a number or a
      * string because providers differ, but **never coerced between them**: a
      * code turned into `NaN` by a reflexive `Number()` would compare equal to no
      * known code and silently classify a hard failure as unrecognised.
      */
-    errorCodeProvider: z.union([z.number(), z.string()]).optional(),
+    errorCodeProvider: z.union([z.number(), z.string()]).nullish(),
     /**
      * See {@link Interface.user}.
      */
-    user: userSnapshotSchema.optional(),
+    user: userSnapshotSchema.nullish(),
   });
 
   /**

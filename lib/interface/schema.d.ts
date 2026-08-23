@@ -561,6 +561,17 @@ export declare const timestampLike: () => z.ZodType<TimestampLike, TimestampLike
  * time, and treating it as one produces an epoch-zero date that sorts first and
  * expires immediately.
  *
+ * That rejection is why every field validated by this helper stays `.optional()`
+ * while the rest of the package's stored-document fields are `.nullish()`. The
+ * general rule there is that a stored optional field arrives as an explicit
+ * `null`, so a schema must accept one; the exception here is that for an instant
+ * specifically, accepting `null` would hand a caller a value that reads as a
+ * date and denotes 1970. The exemption is inventoried in `nullRejecting` in
+ * `test/interface/schema.test.ts`, so it cannot be widened silently — and it is
+ * an exemption rather than a preference: if a stored document is ever observed
+ * carrying `null` in one of these fields, the correct response is to decide what
+ * a null instant means and record it, not to reach for `.nullish()`.
+ *
  * @return {z.ZodType<TimestampLike | Date | string | number>} Schema accepting any read shape of a stored timestamp.
  */
 export declare const auditTimestamp: () => z.ZodType<TimestampLike | Date | string | number>;

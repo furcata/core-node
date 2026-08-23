@@ -68,7 +68,7 @@ export declare namespace Ledger {
          * "settled at zero". A caller that collapses the two with `?? 0` will treat
          * an outstanding reservation as a completed no-op and release it.
          */
-        consumed?: number;
+        consumed?: number | null;
         /**
          * Allowance this scope was seeded from, recorded for observability.
          *
@@ -87,7 +87,7 @@ export declare namespace Ledger {
          * spend that actually happened. Absent or `false` both mean "not confirmed" —
          * a record is only confirmed when this is explicitly `true`.
          */
-        spendConfirmed?: boolean;
+        spendConfirmed?: boolean | null;
     }
     /**
      * Runtime schema producing {@link Interface}.
@@ -106,11 +106,11 @@ export declare namespace Ledger {
         service: z.ZodString;
         scope: z.ZodString;
         amount: z.ZodNumber;
-        consumed: z.ZodOptional<z.ZodNumber>;
+        consumed: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
         limit: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
-        spendConfirmed: z.ZodOptional<z.ZodBoolean>;
-        id: z.ZodOptional<z.ZodString>;
-        backup: z.ZodOptional<z.ZodBoolean>;
+        spendConfirmed: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
+        id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        backup: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
         created: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         updated: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         expiry: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;

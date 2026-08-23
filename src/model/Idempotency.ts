@@ -111,14 +111,14 @@ export namespace Idempotency {
      * of work another process has since redone. Absent once the record has
      * settled.
      */
-    ownerToken?: string;
+    ownerToken?: string | null;
     /**
      * Number of times this key has been claimed, including the first.
      *
      * Increments each time a lapsed lease is reclaimed, so a value climbing
      * without the record settling indicates a handler that keeps dying mid-flight.
      */
-    attempts?: number;
+    attempts?: number | null;
     /**
      * Durable, operation-specific checkpoints retained across failed attempts and
      * lease reclaims, so a retried handler can skip work that already succeeded.
@@ -127,12 +127,12 @@ export namespace Idempotency {
      * no checkpoint has been recorded yet, which is not the same as the operation
      * having no steps.
      */
-    progress?: Record<string, unknown>;
+    progress?: Record<string, unknown> | null;
     /**
      * Outcome of the original attempt, present only once
      * {@link Interface.state} is {@link State.completed}.
      */
-    response?: Response;
+    response?: Response | null;
     /**
      * Instant at which the current holder's lease lapses, after which another
      * attempt may reclaim the key.
@@ -199,19 +199,19 @@ export namespace Idempotency {
     /**
      * See {@link Interface.ownerToken}.
      */
-    ownerToken: token().optional(),
+    ownerToken: token().nullish(),
     /**
      * See {@link Interface.attempts}.
      */
-    attempts: counter().optional(),
+    attempts: counter().nullish(),
     /**
      * See {@link Interface.progress}.
      */
-    progress: z.record(z.string(), z.unknown()).optional(),
+    progress: z.record(z.string(), z.unknown()).nullish(),
     /**
      * See {@link Interface.response}.
      */
-    response: responseSchema.optional(),
+    response: responseSchema.nullish(),
     /**
      * See {@link Interface.lockExpires}.
      */

@@ -73,41 +73,41 @@ export namespace EventData {
     /**
      * Public display name of the event.
      */
-    name?: string;
+    name?: string | null;
     /**
      * Detailed description of the event shown to potential participants.
      */
-    description?: string;
+    description?: string | null;
     /**
      * BCP 47 language tag for the event's primary language (e.g., `"en"`).
      */
-    language?: string;
+    language?: string | null;
     /**
      * Firestore document ID of the account that owns this event.
      */
-    account?: string;
+    account?: string | null;
     /**
      * Array of media asset URLs (images, videos) associated with the event.
      */
-    media?: string[];
+    media?: string[] | null;
     /**
      * Event format; see {@link Type} for accepted values.
      * Accepts a typed enum member or a raw string for forward-compatibility
      * with values stored in Firestore before this enum existed.
      */
-    type?: Type | string;
+    type?: Type | string | null;
     /**
      * Recurrence cadence; see {@link Frequency} for accepted values.
      * Accepts a typed enum member or a raw string for forward-compatibility
      * with values stored in Firestore before this enum existed.
      */
-    frequency?: Frequency | string;
+    frequency?: Frequency | string | null;
     /**
      * Current lifecycle status; see {@link Status} for accepted values.
      * Accepts a typed enum member or a raw string for forward-compatibility
      * with values stored in Firestore before this enum existed.
      */
-    status?: Status | string;
+    status?: Status | string | null;
     /**
      * Firebase Auth UID of the user who created this event, or `null` for
      * system-generated events.
@@ -117,30 +117,30 @@ export namespace EventData {
      * Ordered array of content blocks that compose the event's rich-media
      * detail page.
      */
-    blocks?: Block.Interface[],
+    blocks?: Block.Interface[] | null,
     /**
      * @deprecated Use the `Price` namespace instead.
      * ISO 4217 currency code for the event ticket price.
      */
-    currency?: string;
+    currency?: string | null;
     /**
      * @deprecated Use the `Price` namespace instead.
      * Ticket price amount expressed in the smallest currency unit (e.g., cents).
      */
-    amount?: number;
+    amount?: number | null;
     /**
      * Firebase Auth UIDs of participants who have booked or joined this event.
      */
-    users?: string[]; // user ids
+    users?: string[] | null; // user ids
     /**
      * Firebase Auth UIDs of users who have been designated as event hosts.
      */
-    hosts?: string[]; // user ids
+    hosts?: string[] | null; // user ids
     /**
      * Maximum number of participants allowed to join; enforced by Cloud
      * Functions during the booking process.
      */
-    limit?: number;
+    limit?: number | null;
     /**
      * Timestamp at which the event starts; stored as a Firestore Timestamp
      * or ISO 8601 string.
@@ -154,30 +154,30 @@ export namespace EventData {
     /**
      * Planned duration of the event in minutes.
      */
-    duration?: number; // in minutes
+    duration?: number | null; // in minutes
     /**
      * UTC hour of the day (0–23) at which recurring Cloud Function jobs
      * process or re-schedule this event.
      */
-    runHour?: number;
+    runHour?: number | null;
     /**
      * Cumulative number of times this event's detail page has been clicked
      * from a listing view.
      */
-    clicks?: number;
+    clicks?: number | null;
     /**
      * Cumulative number of times this event's detail page has been viewed.
      */
-    views?: number;
+    views?: number | null;
     /**
      * Cumulative number of users who initiated the checkout / booking flow for
      * this event.
      */
-    checkout?: number;
+    checkout?: number | null;
     /**
      * Cumulative number of confirmed bookings for this event.
      */
-    booked?: number;
+    booked?: number | null;
   }
 
   /**
@@ -209,72 +209,72 @@ export namespace EventData {
     /**
      * See {@link Interface.name}.
      */
-    name: z.string().optional(),
+    name: z.string().nullish(),
     /**
      * See {@link Interface.description}.
      */
-    description: z.string().optional(),
+    description: z.string().nullish(),
     /**
      * See {@link Interface.language}.
      */
-    language: nonEmptyString().optional(),
+    language: nonEmptyString().nullish(),
     /**
      * See {@link Interface.account}.
      */
-    account: documentId().optional(),
+    account: documentId().nullish(),
     /**
      * See {@link Interface.media}.
      */
-    media: z.array(z.string()).optional(),
+    media: z.array(z.string()).nullish(),
     /**
      * See {@link Interface.type}, and the note on this schema about why a raw
      * string is still accepted.
      */
-    type: z.union([z.enum(Type), z.string()]).optional(),
+    type: z.union([z.enum(Type), z.string()]).nullish(),
     /**
      * See {@link Interface.frequency}, and the note on this schema about why a
      * raw string is still accepted.
      */
-    frequency: z.union([z.enum(Frequency), z.string()]).optional(),
+    frequency: z.union([z.enum(Frequency), z.string()]).nullish(),
     /**
      * See {@link Interface.status}, and the note on this schema about why a raw
      * string is still accepted.
      */
-    status: z.union([z.enum(Status), z.string()]).optional(),
+    status: z.union([z.enum(Status), z.string()]).nullish(),
     /**
      * See {@link Interface.uid}. `null` denotes a system-generated event and
      * must survive a JSON round-trip.
      */
-    uid: z.string().nullable().optional(),
+    uid: z.string().nullish(),
     /**
      * See {@link Interface.blocks}. Every element is validated against
      * {@link Block.Schema}, so one malformed block fails the event rather than
      * reaching a renderer that has no branch for it.
      */
-    blocks: z.array(Block.Schema).optional(),
+    blocks: z.array(Block.Schema).nullish(),
     /**
      * See {@link Interface.currency}.
      * @deprecated Use the `Price` namespace instead.
      */
-    currency: z.string().regex(/^[A-Za-z]{3}$/, {error: 'Expected a three-letter ISO 4217 currency code'}).optional(),
+    currency: z.string().regex(/^[A-Za-z]{3}$/, {error: 'Expected a three-letter ISO 4217 currency code'}).nullish(),
     /**
      * See {@link Interface.amount}. Money, so a non-numeric value is rejected
      * rather than coerced into `NaN`.
      * @deprecated Use the `Price` namespace instead.
      */
-    amount: finiteNumber().optional(),
+    amount: finiteNumber().nullish(),
     /**
      * See {@link Interface.users}.
      */
-    users: z.array(z.string()).optional(),
+    users: z.array(z.string()).nullish(),
     /**
      * See {@link Interface.hosts}.
      */
-    hosts: z.array(z.string()).optional(),
+    hosts: z.array(z.string()).nullish(),
     /**
      * See {@link Interface.limit}.
      */
-    limit: counter().optional(),
+    limit: counter().nullish(),
     /**
      * See {@link Interface.startTime}.
      */
@@ -286,28 +286,28 @@ export namespace EventData {
     /**
      * See {@link Interface.duration}. Whole minutes.
      */
-    duration: counter().optional(),
+    duration: counter().nullish(),
     /**
      * See {@link Interface.runHour}. A UTC hour of day, so the accepted range is
      * 0 to 23; a value outside it schedules a recurring job that never fires.
      */
-    runHour: z.int().min(0).max(23).optional(),
+    runHour: z.int().min(0).max(23).nullish(),
     /**
      * See {@link Interface.clicks}.
      */
-    clicks: counter().optional(),
+    clicks: counter().nullish(),
     /**
      * See {@link Interface.views}.
      */
-    views: counter().optional(),
+    views: counter().nullish(),
     /**
      * See {@link Interface.checkout}.
      */
-    checkout: counter().optional(),
+    checkout: counter().nullish(),
     /**
      * See {@link Interface.booked}.
      */
-    booked: counter().optional(),
+    booked: counter().nullish(),
   });
 
   /**

@@ -1045,3 +1045,130 @@ describe('Account.Schema', () => {
     });
   });
 });
+
+/**
+ * Regression cover for the defect that stored `null` used to trigger.
+ *
+ * This is the worst-affected shape in the package: an account document carries
+ * a large number of progressively-filled registration fields, and the ones that
+ * have not been filled in are written as explicit `null` rather than omitted. A
+ * schema built only from `.optional()` therefore rejected essentially every
+ * stored account, not an unusual one.
+ *
+ * The fixture reproduces the field layout of a real stored account — the same
+ * keys, with `null` in the same places — carrying entirely synthetic values. The
+ * layout is the load-bearing part: a fixture using `undefined` where a stored
+ * document has `null` parses identically under `.optional()` and `.nullish()`
+ * and so asserts nothing.
+ */
+describe('Account.Schema against the stored document layout', () => {
+  /**
+   * A stored account with the unfilled registration fields as explicit `null`.
+   *
+   * `geohash`, `latitude`, `longitude` and `placeId` are place fields that
+   * stored accounts carry but {@link Account.Interface} does not declare. They
+   * are in the fixture because they are in the documents, and they exercise the
+   * loose-object policy rather than the null policy.
+   *
+   * @return {Record<string, unknown>} An account document in stored form.
+   */
+  const storedAccount = (): Record<string, unknown> => ({
+    id: 'account_synthetic',
+    name: 'Synthetic Org',
+    language: 'en',
+    status: Account.Status.active,
+    type: Account.Type.business,
+    uid: 'uid_synthetic',
+    stockTicker: null,
+    stockExchange: null,
+    useName: null,
+    street1: null,
+    street2: null,
+    city: null,
+    area: null,
+    country: null,
+    postalCode: null,
+    utcOffset: null,
+    businessName: null,
+    businessType: null,
+    businessIndustry: null,
+    businessRegistrationNumber: null,
+    businessRegistrationIdentifier: null,
+    companyType: null,
+    appToPersonUseCase: null,
+    tollFreeUseCase: null,
+    useCaseDescription: null,
+    useCaseDescriptionCTA: null,
+    description: null,
+    sampleMessage1: null,
+    sampleMessage2: null,
+    sampleMessage3: null,
+    sampleMessage4: null,
+    sampleMessage5: null,
+    links: { website: 'https://example.invalid', facebook: null, instagram: null },
+    geohash: null,
+    latitude: null,
+    longitude: null,
+    placeId: null,
+    pending: 0,
+    ready: 0,
+    created: '2026-01-01T00:00:00.000Z',
+    updated: '2026-01-01T00:00:00.000Z',
+  });
+
+  it('should parse a stored account whose unfilled fields are explicit null', () => {
+    expect(Account.safeParse(storedAccount()).success).toBe(true);
+  });
+
+  it('should parse a stored account with every non-required declared field null', () => {
+    const everyOptionalNull: Record<string, unknown> = {};
+    for (const key of Object.keys(Account.Schema.shape)) {
+      if (['created', 'updated', 'expiry', 'domainTimestamp'].includes(key)) continue;
+      everyOptionalNull[key] = null;
+    }
+    expect(Account.safeParse(everyOptionalNull).success).toBe(true);
+  });
+
+  it('should preserve null on a nested links member rather than folding it into undefined', () => {
+    const parsed = Account.parse(storedAccount());
+    expect(parsed.links?.facebook).toBeNull();
+    expect(parsed.links?.website).toBe('https://example.invalid');
+  });
+
+  it('should leave a null enum reading as unset under a nullish-coalescing read', () => {
+    const parsed = Account.parse(storedAccount());
+    expect(parsed.companyType ?? Account.CompanyType.private).toBe(Account.CompanyType.private);
+    expect(parsed.businessType).toBeNull();
+  });
+
+  it('should preserve the undeclared place fields a stored account carries', () => {
+    const parsed = Account.parse(storedAccount());
+    expect('geohash' in parsed).toBe(true);
+    expect(parsed['geohash']).toBeNull();
+  });
+
+  describe('the loosening is bounded to null and nothing else', () => {
+    it('should still reject an unrecognised enum member in a field that now accepts null', () => {
+      for (const field of ['status', 'type', 'companyType', 'businessType', 'businessIndustry', 'appToPersonUseCase']) {
+        expect(Account.safeParse({ ...storedAccount(), [field]: 'not_a_member' }).success).toBe(false);
+      }
+    });
+
+    it('should still reject a wrongly typed value in a field that now accepts null', () => {
+      expect(Account.safeParse({ ...storedAccount(), utcOffset: '-300' }).success).toBe(false);
+      expect(Account.safeParse({ ...storedAccount(), estimatedVolume: 1.5 }).success).toBe(false);
+      expect(Account.safeParse({ ...storedAccount(), automaticHeader: 'yes' }).success).toBe(false);
+      expect(Account.safeParse({ ...storedAccount(), links: 'https://example.invalid' }).success).toBe(false);
+    });
+
+    it('should still reject an out-of-range utcOffset in a field that now accepts null', () => {
+      expect(Account.safeParse({ ...storedAccount(), utcOffset: 5000 }).success).toBe(false);
+    });
+
+    it('should still reject a null audit timestamp, which is not a time', () => {
+      for (const field of ['created', 'updated', 'expiry', 'domainTimestamp']) {
+        expect(Account.safeParse({ ...storedAccount(), [field]: null }).success).toBe(false);
+      }
+    });
+  });
+});

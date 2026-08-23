@@ -124,8 +124,8 @@ export declare namespace Capacity {
         generation: z.ZodNumber;
         expiresAt: z.ZodNumber;
         expires: z.ZodOptional<z.ZodType<TimestampLike, TimestampLike, z.core.$ZodTypeInternals<TimestampLike, TimestampLike>>>;
-        id: z.ZodOptional<z.ZodString>;
-        backup: z.ZodOptional<z.ZodBoolean>;
+        id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        backup: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
         created: z.ZodOptional<z.ZodType<string | number | TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | TimestampLike | Date, unknown>>>;
         updated: z.ZodOptional<z.ZodType<string | number | TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | TimestampLike | Date, unknown>>>;
         expiry: z.ZodOptional<z.ZodType<string | number | TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | TimestampLike | Date, unknown>>>;
@@ -154,8 +154,8 @@ export declare namespace Capacity {
         generation: z.ZodNumber;
         expiresAt: z.ZodNumber;
         expires: z.ZodOptional<z.ZodType<TimestampLike, TimestampLike, z.core.$ZodTypeInternals<TimestampLike, TimestampLike>>>;
-        id: z.ZodOptional<z.ZodString>;
-        backup: z.ZodOptional<z.ZodBoolean>;
+        id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        backup: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
         created: z.ZodOptional<z.ZodType<string | number | TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | TimestampLike | Date, unknown>>>;
         updated: z.ZodOptional<z.ZodType<string | number | TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | TimestampLike | Date, unknown>>>;
         expiry: z.ZodOptional<z.ZodType<string | number | TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | TimestampLike | Date, unknown>>>;

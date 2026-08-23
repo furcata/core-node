@@ -59,41 +59,41 @@ export declare namespace EventData {
         /**
          * Public display name of the event.
          */
-        name?: string;
+        name?: string | null;
         /**
          * Detailed description of the event shown to potential participants.
          */
-        description?: string;
+        description?: string | null;
         /**
          * BCP 47 language tag for the event's primary language (e.g., `"en"`).
          */
-        language?: string;
+        language?: string | null;
         /**
          * Firestore document ID of the account that owns this event.
          */
-        account?: string;
+        account?: string | null;
         /**
          * Array of media asset URLs (images, videos) associated with the event.
          */
-        media?: string[];
+        media?: string[] | null;
         /**
          * Event format; see {@link Type} for accepted values.
          * Accepts a typed enum member or a raw string for forward-compatibility
          * with values stored in Firestore before this enum existed.
          */
-        type?: Type | string;
+        type?: Type | string | null;
         /**
          * Recurrence cadence; see {@link Frequency} for accepted values.
          * Accepts a typed enum member or a raw string for forward-compatibility
          * with values stored in Firestore before this enum existed.
          */
-        frequency?: Frequency | string;
+        frequency?: Frequency | string | null;
         /**
          * Current lifecycle status; see {@link Status} for accepted values.
          * Accepts a typed enum member or a raw string for forward-compatibility
          * with values stored in Firestore before this enum existed.
          */
-        status?: Status | string;
+        status?: Status | string | null;
         /**
          * Firebase Auth UID of the user who created this event, or `null` for
          * system-generated events.
@@ -103,30 +103,30 @@ export declare namespace EventData {
          * Ordered array of content blocks that compose the event's rich-media
          * detail page.
          */
-        blocks?: Block.Interface[];
+        blocks?: Block.Interface[] | null;
         /**
          * @deprecated Use the `Price` namespace instead.
          * ISO 4217 currency code for the event ticket price.
          */
-        currency?: string;
+        currency?: string | null;
         /**
          * @deprecated Use the `Price` namespace instead.
          * Ticket price amount expressed in the smallest currency unit (e.g., cents).
          */
-        amount?: number;
+        amount?: number | null;
         /**
          * Firebase Auth UIDs of participants who have booked or joined this event.
          */
-        users?: string[];
+        users?: string[] | null;
         /**
          * Firebase Auth UIDs of users who have been designated as event hosts.
          */
-        hosts?: string[];
+        hosts?: string[] | null;
         /**
          * Maximum number of participants allowed to join; enforced by Cloud
          * Functions during the booking process.
          */
-        limit?: number;
+        limit?: number | null;
         /**
          * Timestamp at which the event starts; stored as a Firestore Timestamp
          * or ISO 8601 string.
@@ -140,30 +140,30 @@ export declare namespace EventData {
         /**
          * Planned duration of the event in minutes.
          */
-        duration?: number;
+        duration?: number | null;
         /**
          * UTC hour of the day (0–23) at which recurring Cloud Function jobs
          * process or re-schedule this event.
          */
-        runHour?: number;
+        runHour?: number | null;
         /**
          * Cumulative number of times this event's detail page has been clicked
          * from a listing view.
          */
-        clicks?: number;
+        clicks?: number | null;
         /**
          * Cumulative number of times this event's detail page has been viewed.
          */
-        views?: number;
+        views?: number | null;
         /**
          * Cumulative number of users who initiated the checkout / booking flow for
          * this event.
          */
-        checkout?: number;
+        checkout?: number | null;
         /**
          * Cumulative number of confirmed bookings for this event.
          */
-        booked?: number;
+        booked?: number | null;
     }
     /**
      * Runtime schema producing {@link Interface}.
@@ -189,46 +189,46 @@ export declare namespace EventData {
      * accepted and how to widen the schema for a write payload.
      */
     const Schema: z.ZodObject<{
-        name: z.ZodOptional<z.ZodString>;
-        description: z.ZodOptional<z.ZodString>;
-        language: z.ZodOptional<z.ZodString>;
-        account: z.ZodOptional<z.ZodString>;
-        media: z.ZodOptional<z.ZodArray<z.ZodString>>;
-        type: z.ZodOptional<z.ZodUnion<readonly [z.ZodEnum<typeof Type>, z.ZodString]>>;
-        frequency: z.ZodOptional<z.ZodUnion<readonly [z.ZodEnum<typeof Frequency>, z.ZodString]>>;
-        status: z.ZodOptional<z.ZodUnion<readonly [z.ZodEnum<typeof Status>, z.ZodString]>>;
+        name: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        description: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        language: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        account: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+        type: z.ZodOptional<z.ZodNullable<z.ZodUnion<readonly [z.ZodEnum<typeof Type>, z.ZodString]>>>;
+        frequency: z.ZodOptional<z.ZodNullable<z.ZodUnion<readonly [z.ZodEnum<typeof Frequency>, z.ZodString]>>>;
+        status: z.ZodOptional<z.ZodNullable<z.ZodUnion<readonly [z.ZodEnum<typeof Status>, z.ZodString]>>>;
         uid: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        blocks: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        blocks: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodObject<{
             type: z.ZodEnum<typeof Block.Type>;
             value: z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodArray<z.ZodUnknown>]>;
             label: z.ZodString;
-            width: z.ZodOptional<z.ZodNumber>;
-            height: z.ZodOptional<z.ZodNumber>;
-        }, z.core.$loose>>>;
-        currency: z.ZodOptional<z.ZodString>;
-        amount: z.ZodOptional<z.ZodNumber>;
-        users: z.ZodOptional<z.ZodArray<z.ZodString>>;
-        hosts: z.ZodOptional<z.ZodArray<z.ZodString>>;
-        limit: z.ZodOptional<z.ZodNumber>;
+            width: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+            height: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        }, z.core.$loose>>>>;
+        currency: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        amount: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        users: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+        hosts: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+        limit: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
         startTime: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         endTime: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
-        duration: z.ZodOptional<z.ZodNumber>;
-        runHour: z.ZodOptional<z.ZodInt>;
-        clicks: z.ZodOptional<z.ZodNumber>;
-        views: z.ZodOptional<z.ZodNumber>;
-        checkout: z.ZodOptional<z.ZodNumber>;
-        booked: z.ZodOptional<z.ZodNumber>;
-        location: z.ZodOptional<z.ZodArray<z.ZodNumber>>;
-        placeId: z.ZodOptional<z.ZodString>;
-        latitude: z.ZodOptional<z.ZodNumber>;
-        longitude: z.ZodOptional<z.ZodNumber>;
-        placeName: z.ZodOptional<z.ZodString>;
-        utcOffset: z.ZodOptional<z.ZodNumber>;
-        country: z.ZodOptional<z.ZodString>;
-        geohash: z.ZodOptional<z.ZodString>;
-        area: z.ZodOptional<z.ZodString>;
-        id: z.ZodOptional<z.ZodString>;
-        backup: z.ZodOptional<z.ZodBoolean>;
+        duration: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        runHour: z.ZodOptional<z.ZodNullable<z.ZodInt>>;
+        clicks: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        views: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        checkout: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        booked: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        location: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodNumber>>>;
+        placeId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        latitude: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        longitude: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        placeName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        utcOffset: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        country: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        geohash: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        area: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        backup: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
         created: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         updated: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         expiry: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;

@@ -63,12 +63,12 @@ export declare namespace Block {
          * Optional display width hint in pixels for media blocks such as images
          * and videos.
          */
-        width?: number;
+        width?: number | null;
         /**
          * Optional display height hint in pixels for media blocks such as images
          * and videos.
          */
-        height?: number;
+        height?: number | null;
     }
     /**
      * Runtime schema producing {@link Interface}.
@@ -87,8 +87,8 @@ export declare namespace Block {
         type: z.ZodEnum<typeof Type>;
         value: z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodArray<z.ZodUnknown>]>;
         label: z.ZodString;
-        width: z.ZodOptional<z.ZodNumber>;
-        height: z.ZodOptional<z.ZodNumber>;
+        width: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        height: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     }, z.core.$loose>;
     /**
      * Compile-time proof that {@link Schema} produces {@link Interface}.

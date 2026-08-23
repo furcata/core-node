@@ -397,25 +397,32 @@ describe('parse plumbing', () => {
  * those two artifacts against each other.
  *
  * These tests are the enforcement. Each entry states, explicitly, which keys
- * accept `null` and which are required, and the assertions compare that
- * statement against what the schema actually does. Adding `.nullable()` to a
- * field without also declaring `| null` on its interface turns one of them red,
- * and so does the reverse.
+ * still **reject** `null` and which are required, and the assertions compare
+ * that statement against what the schema actually does.
  *
  * The policy itself is:
  *
- * - A field annotated `| null` **accepts `null`** via `.nullable()`.
- * - A field annotated only `?` **rejects `null`**, because `?` and `| null` are
- *   different claims and a parse must not return a value the declared type says
- *   cannot occur.
- * - A field annotated `any` is decided case by case and named below, because
- *   `any` permits `null` without meaning to. The audit and event timestamps
- *   **reject** it — an explicitly null timestamp is not a time, and reading one
- *   as epoch zero sorts it first and expires it immediately — while genuinely
- *   open diagnostic fields accept it.
- * - `.nullish()` is used nowhere. Optionality and nullability are declared
- *   separately so each one is a deliberate statement rather than a side effect
- *   of the other.
+ * - A stored-document field declared optional **accepts `null`** via
+ *   `.nullish()`, and its interface is annotated `| null` to match. Firestore
+ *   stores an absent optional field as an explicit `null` under common write
+ *   patterns, so a schema that accepted only `undefined` rejected the documents
+ *   it existed to validate.
+ * - An **instant-valued** field — one validated by `auditTimestamp()` or
+ *   `timestampLike()` — still **rejects `null`**, and stays `.optional()`. An
+ *   explicitly null timestamp is not a time, and reading one as epoch zero sorts
+ *   it first and expires it immediately. These are named in `nullRejecting`
+ *   below, one per case, so the exemption is an inventory rather than an
+ *   accident.
+ * - A **required** field still rejects `null`, because a required field carrying
+ *   `null` is exactly the load-bearing absence the requirement exists to stop.
+ * - A field annotated `any` is decided case by case: genuinely open diagnostic
+ *   fields accept `null`, instant-valued ones do not.
+ *
+ * `nullRejecting` is deliberately the **complement** of the loosening rather
+ * than a restatement of it. An accept-list would grow by one entry every time a
+ * field was loosened and would therefore never catch a blanket
+ * `.optional()` → `.nullish()` sweep over the whole package; a reject-list
+ * shrinks to empty, so any such sweep turns these red.
  */
 describe('null and optionality policy', () => {
   /**
@@ -431,8 +438,11 @@ describe('null and optionality policy', () => {
     parse: (value: unknown) => {success: boolean};
     /** A document that parses, used as the baseline for every probe. */
     base: Record<string, unknown>;
-    /** Keys that must accept an explicit `null`. */
-    nullAccepting: string[];
+    /**
+     * Keys that must still **reject** an explicit `null`: every required field,
+     * plus every instant-valued field. Every other declared key must accept it.
+     */
+    nullRejecting: string[];
     /** Keys whose absence must be rejected. */
     required: string[];
   }
@@ -443,11 +453,9 @@ describe('null and optionality policy', () => {
       keys: Object.keys(placeDataShape),
       parse: (value) => safeParsePlaceData(value),
       base: {id: 'place_synthetic', latitude: 1, longitude: 1},
-      // Exactly the thirteen fields place.ts declares as `X | null`.
-      nullAccepting: [
-        'area', 'areaLong', 'city', 'cityLong', 'country', 'countryLong',
-        'longName', 'name', 'postalCode', 'state', 'stateLong', 'url', 'vicinity',
-      ],
+      // Nothing: every key is an optional stored field, and none is instant-valued.
+      // `created` here is a declared ISO 8601 *string*, not a Firestore instant.
+      nullRejecting: [],
       required: [],
     },
     {
@@ -455,8 +463,8 @@ describe('null and optionality policy', () => {
       keys: Object.keys(messageQueueShape),
       parse: (value) => safeParseMessageQueue(value),
       base: {pending: 1},
-      // `counted` alone, because it is declared `any` and genuinely open.
-      nullAccepting: ['counted'],
+      // Nothing: four optional stored counters and one genuinely open `any`.
+      nullRejecting: [],
       required: [],
     },
     {
@@ -464,7 +472,7 @@ describe('null and optionality policy', () => {
       keys: Object.keys(Price.Schema.shape),
       parse: (value) => Price.safeParse(value),
       base: {account: 'account_synthetic'},
-      nullAccepting: ['uid'],
+      nullRejecting: ['account', 'created', 'expiry', 'updated'],
       required: ['account'],
     },
     {
@@ -472,7 +480,7 @@ describe('null and optionality policy', () => {
       keys: Object.keys(EventData.Schema.shape),
       parse: (value) => EventData.safeParse(value),
       base: {},
-      nullAccepting: ['uid'],
+      nullRejecting: ['created', 'endTime', 'expiry', 'startTime', 'updated'],
       required: [],
     },
     {
@@ -480,7 +488,7 @@ describe('null and optionality policy', () => {
       keys: Object.keys(MessagingEvent.Schema.shape),
       parse: (value) => MessagingEvent.safeParse(value),
       base: {},
-      nullAccepting: ['uid', 'error'],
+      nullRejecting: ['created', 'expiry', 'updated'],
       required: [],
     },
     {
@@ -488,7 +496,7 @@ describe('null and optionality policy', () => {
       keys: Object.keys(Post.Schema.shape),
       parse: (value) => Post.safeParse(value),
       base: {source: 'source_synthetic', type: Post.Type.link},
-      nullAccepting: [],
+      nullRejecting: ['created', 'expiry', 'source', 'type', 'updated'],
       required: ['source', 'type'],
     },
     {
@@ -496,7 +504,7 @@ describe('null and optionality policy', () => {
       keys: Object.keys(Block.Schema.shape),
       parse: (value) => Block.safeParse(value),
       base: {type: Block.Type.text, value: 'v', label: 'l'},
-      nullAccepting: [],
+      nullRejecting: ['label', 'type', 'value'],
       required: ['type', 'value', 'label'],
     },
     {
@@ -504,7 +512,7 @@ describe('null and optionality policy', () => {
       keys: Object.keys(Account.Schema.shape),
       parse: (value) => Account.safeParse(value),
       base: {},
-      nullAccepting: ['counted'],
+      nullRejecting: ['created', 'domainTimestamp', 'expiry', 'updated'],
       required: [],
     },
     {
@@ -512,7 +520,7 @@ describe('null and optionality policy', () => {
       keys: Object.keys(Idempotency.Schema.shape),
       parse: (value) => Idempotency.safeParse(value),
       base: {state: Idempotency.State.failed, requestHash: 'h'},
-      nullAccepting: [],
+      nullRejecting: ['created', 'expiry', 'lockExpires', 'requestHash', 'state', 'updated'],
       required: ['state', 'requestHash'],
     },
     {
@@ -520,7 +528,7 @@ describe('null and optionality policy', () => {
       keys: Object.keys(Ledger.Schema.shape),
       parse: (value) => Ledger.safeParse(value),
       base: {service: 's', scope: 'sc', amount: 1},
-      nullAccepting: ['limit'],
+      nullRejecting: ['amount', 'created', 'expiry', 'scope', 'service', 'updated'],
       required: ['service', 'scope', 'amount'],
     },
     {
@@ -528,7 +536,7 @@ describe('null and optionality policy', () => {
       keys: Object.keys(Reservation.Schema.shape),
       parse: (value) => Reservation.safeParse(value),
       base: {token: 't', identity: 'i', expiresAt: 1767225600000},
-      nullAccepting: [],
+      nullRejecting: ['expiresAt', 'identity', 'token'],
       required: ['token', 'identity', 'expiresAt'],
     },
     {
@@ -536,7 +544,7 @@ describe('null and optionality policy', () => {
       keys: Object.keys(Entitlement.Schema.shape),
       parse: (value) => Entitlement.safeParse(value),
       base: {account: 'a', uid: 'u', price: 'p', source: 's', type: Price.Type.event},
-      nullAccepting: [],
+      nullRejecting: ['account', 'created', 'expiry', 'price', 'source', 'type', 'uid', 'updated'],
       required: ['account', 'uid', 'price', 'source', 'type'],
     },
     {
@@ -544,7 +552,10 @@ describe('null and optionality policy', () => {
       keys: Object.keys(Capacity.ObjectSchema.shape),
       parse: (value) => Capacity.safeParse(value),
       base: {uid: 'u', price: 'p', source: 's', type: Price.Type.event, token: 't', generation: 0, expiresAt: 1767225600},
-      nullAccepting: [],
+      nullRejecting: [
+        'created', 'expires', 'expiresAt', 'expiry', 'generation', 'price',
+        'source', 'token', 'type', 'uid', 'updated',
+      ],
       required: ['uid', 'price', 'source', 'type', 'token', 'generation', 'expiresAt'],
     },
     {
@@ -552,7 +563,7 @@ describe('null and optionality policy', () => {
       keys: Object.keys(MessageUsage.Schema.shape),
       parse: (value) => MessageUsage.safeParse(value),
       base: {period: '2026-01-01', token: 't'},
-      nullAccepting: [],
+      nullRejecting: ['created', 'expiry', 'period', 'token', 'updated'],
       required: ['period', 'token'],
     },
   ];
@@ -568,12 +579,38 @@ describe('null and optionality policy', () => {
 
   describe('null acceptance', () => {
     it.each(cases.map((entry) => [entry.label, entry] as const))(
-      '%s should accept null on exactly the declared nullable fields',
+      '%s should reject null on exactly the required and instant-valued fields',
       (_label, entry) => {
-        const accepting = entry.keys.filter((key) => entry.parse({...entry.base, [key]: null}).success);
-        expect(accepting.sort()).toEqual([...entry.nullAccepting].sort());
+        const rejecting = entry.keys.filter((key) => !entry.parse({...entry.base, [key]: null}).success);
+        expect(rejecting.sort()).toEqual([...entry.nullRejecting].sort());
       },
     );
+
+    it.each(cases.map((entry) => [entry.label, entry] as const))(
+      '%s should accept null on every other declared key, which is what a stored document carries',
+      (_label, entry) => {
+        const shouldAccept = entry.keys.filter((key) => !entry.nullRejecting.includes(key));
+        const refused = shouldAccept.filter((key) => !entry.parse({...entry.base, [key]: null}).success);
+        expect(refused).toEqual([]);
+      },
+    );
+
+    /**
+     * Guards the assertion above against passing vacuously.
+     *
+     * `Reservation` legitimately has no optional fields at all, so its
+     * accept-set is empty and a per-case non-empty guard would be wrong. The
+     * meaningful check is that the sweep as a whole probes a substantial number
+     * of keys: if a future refactor emptied `keys` for every case, the
+     * per-case assertion would still pass on an empty list while proving
+     * nothing, and this turns red instead.
+     */
+    it('should probe a substantial number of null-accepting keys, or the sweep above is vacuous', () => {
+      const accepting = cases.flatMap((entry) => entry.keys.filter((key) => !entry.nullRejecting.includes(key)));
+      expect(accepting.length).toBeGreaterThan(150);
+      expect(cases.filter((entry) => entry.keys.every((key) => entry.nullRejecting.includes(key))).map((entry) => entry.label))
+        .toEqual(['Reservation.Interface']);
+    });
   });
 
   describe('required fields', () => {

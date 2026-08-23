@@ -51,39 +51,44 @@ export declare namespace Price {
          * Price amount expressed in the smallest currency unit (e.g., cents for
          * USD) to avoid floating-point rounding errors.
          */
-        amount?: number;
+        amount?: number | null;
         /**
          * ISO 4217 currency code for this price (e.g., `"usd"`, `"eur"`).
          */
-        currency?: string;
+        currency?: string | null;
         /**
          * Firestore document ID of the parent product or event that this price is
          * associated with.
          */
-        source?: string;
+        source?: string | null;
         /**
          * URL of the primary display image for this price (e.g., product photo or
          * event cover art).
          */
-        image?: string;
+        image?: string | null;
         /**
          * Short display name shown to buyers during the checkout flow.
          */
-        label?: string;
+        label?: string | null;
         /**
          * Longer description of what the buyer is purchasing, displayed on the
          * checkout and confirmation pages.
          */
-        description?: string;
+        description?: string | null;
         /**
          * Maximum number of users that may purchase this price; enforced by Cloud
-         * Functions during checkout. `undefined` means unlimited.
+         * Functions during checkout.
+         *
+         * Unlimited is expressed **both** ways in stored data: `null` in documents
+         * written by the usual path, and absent in older ones. Read it as
+         * `limit ?? Infinity` rather than testing for `undefined`, which answers
+         * `false` for the far more common of the two.
          */
-        limit?: number;
+        limit?: number | null;
         /**
          * Item category for this price; see {@link Type} for accepted values.
          */
-        type?: Type;
+        type?: Type | null;
         /**
          * Firebase Auth UID of a specific user this price is restricted to, or
          * `null` for publicly purchasable prices.
@@ -92,29 +97,29 @@ export declare namespace Price {
         /**
          * Firebase Auth UIDs of users who have successfully purchased this price.
          */
-        users?: string[];
+        users?: string[] | null;
         /**
          * Visibility scope of this price record; see {@link Visibility} for
          * accepted values.
          */
-        visibility?: Visibility;
+        visibility?: Visibility | null;
         /**
          * Cumulative number of times a link to this price has been clicked.
          */
-        clicks?: number;
+        clicks?: number | null;
         /**
          * Cumulative number of times this price's detail page has been viewed.
          */
-        views?: number;
+        views?: number | null;
         /**
          * Cumulative number of users who initiated the checkout flow for this
          * price.
          */
-        checkout?: number;
+        checkout?: number | null;
         /**
          * Cumulative number of confirmed purchases for this price.
          */
-        booked?: number;
+        booked?: number | null;
     }
     /**
      * Runtime schema producing {@link Interface}.
@@ -129,26 +134,35 @@ export declare namespace Price {
      * signature inherited from {@link BaseFirestore}: a stripping schema would
      * delete unrecognised fields on a read-modify-write, and a strict one would
      * reject documents written before this schema existed.
+     *
+     * Every optional field is `.nullish()` rather than `.optional()`, because a
+     * stored price writes its unset fields as an explicit `null` rather than
+     * omitting them — `limit`, `description` and `image` in particular. A schema
+     * that accepted only `undefined` rejected the documents it exists to
+     * validate. The loosening is bounded to `null` alone: a wrong type, a
+     * fractional counter and an unrecognised enum member are all still rejected,
+     * as are `null` on the required {@link Interface.account} and on the audit
+     * timestamps.
      */
     const Schema: z.ZodObject<{
         account: z.ZodString;
-        amount: z.ZodOptional<z.ZodNumber>;
-        currency: z.ZodOptional<z.ZodString>;
-        source: z.ZodOptional<z.ZodString>;
-        image: z.ZodOptional<z.ZodString>;
-        label: z.ZodOptional<z.ZodString>;
-        description: z.ZodOptional<z.ZodString>;
-        limit: z.ZodOptional<z.ZodNumber>;
-        type: z.ZodOptional<z.ZodEnum<typeof Type>>;
+        amount: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        currency: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        source: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        image: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        description: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        limit: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        type: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof Type>>>;
         uid: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        users: z.ZodOptional<z.ZodArray<z.ZodString>>;
-        visibility: z.ZodOptional<z.ZodEnum<typeof Visibility>>;
-        clicks: z.ZodOptional<z.ZodNumber>;
-        views: z.ZodOptional<z.ZodNumber>;
-        checkout: z.ZodOptional<z.ZodNumber>;
-        booked: z.ZodOptional<z.ZodNumber>;
-        id: z.ZodOptional<z.ZodString>;
-        backup: z.ZodOptional<z.ZodBoolean>;
+        users: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+        visibility: z.ZodOptional<z.ZodNullable<z.ZodEnum<typeof Visibility>>>;
+        clicks: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        views: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        checkout: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        booked: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        backup: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
         created: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         updated: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;
         expiry: z.ZodOptional<z.ZodType<string | number | import("../interface/schema.js").TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | import("../interface/schema.js").TimestampLike | Date, unknown>>>;

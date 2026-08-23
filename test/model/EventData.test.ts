@@ -464,3 +464,96 @@ describe('EventData.Schema', () => {
     });
   });
 });
+
+/**
+ * Regression cover for the defect that stored `null` used to trigger.
+ *
+ * An event document is written progressively, so its unset fields — including
+ * the array-valued ones — are stored as explicit `null` rather than omitted.
+ * `blocks: null` is the interesting case: an array field nulled out is not
+ * distinguishable from an absent one by any read that uses `?? []`, but it was
+ * enough to reject the whole document at the parse boundary.
+ *
+ * The fixture reproduces the field layout of a real stored event, with entirely
+ * synthetic values. A fixture using `undefined` where a stored document has
+ * `null` would parse identically under `.optional()` and `.nullish()`, and so
+ * would assert nothing.
+ */
+describe('EventData.Schema against the stored document layout', () => {
+  /**
+   * A stored event whose unset fields are explicit `null`.
+   *
+   * @return {Record<string, unknown>} An event document in stored form.
+   */
+  const storedEvent = (): Record<string, unknown> => ({
+    name: 'Synthetic event',
+    account: 'account_synthetic',
+    type: EventData.Type.online,
+    status: EventData.Status.scheduled,
+    description: null,
+    language: null,
+    media: null,
+    blocks: null,
+    images: null,
+    currency: null,
+    amount: null,
+    users: null,
+    maxUsers: null,
+    successMessage: null,
+    redirectUrl: null,
+    successUrl: null,
+    uid: null,
+    limit: null,
+    startTime: '2026-01-01T00:00:00.000Z',
+    endTime: '2026-01-01T02:00:00.000Z',
+    created: '2026-01-01T00:00:00.000Z',
+    updated: '2026-01-01T00:00:00.000Z',
+  });
+
+  it('should parse a stored event whose unset fields are explicit null', () => {
+    expect(EventData.safeParse(storedEvent()).success).toBe(true);
+  });
+
+  it('should parse a stored event with every non-required declared field null', () => {
+    const everyOptionalNull: Record<string, unknown> = {};
+    for (const key of Object.keys(EventData.Schema.shape)) {
+      if (['created', 'updated', 'expiry', 'startTime', 'endTime'].includes(key)) continue;
+      everyOptionalNull[key] = null;
+    }
+    expect(EventData.safeParse(everyOptionalNull).success).toBe(true);
+  });
+
+  it('should accept a null array field and leave it reading as empty under a nullish-coalescing read', () => {
+    const parsed = EventData.parse(storedEvent());
+    expect(parsed.blocks).toBeNull();
+    expect(parsed.blocks ?? []).toEqual([]);
+    expect(parsed.users ?? []).toEqual([]);
+  });
+
+  describe('the loosening is bounded to null and nothing else', () => {
+    it('should still reject a non-array value in an array field that now accepts null', () => {
+      for (const field of ['blocks', 'users', 'hosts', 'media']) {
+        expect(EventData.safeParse({ ...storedEvent(), [field]: 'not_an_array' }).success).toBe(false);
+      }
+    });
+
+    it('should still reject a malformed element inside an array field that now accepts null', () => {
+      expect(EventData.safeParse({ ...storedEvent(), blocks: [{ type: Block.Type.text }] }).success).toBe(false);
+      expect(EventData.safeParse({ ...storedEvent(), users: [42] }).success).toBe(false);
+    });
+
+    it('should still reject a malformed currency in a field that now accepts null', () => {
+      expect(EventData.safeParse({ ...storedEvent(), currency: 'dollars' }).success).toBe(false);
+    });
+
+    it('should still reject an out-of-range runHour in a field that now accepts null', () => {
+      expect(EventData.safeParse({ ...storedEvent(), runHour: 24 }).success).toBe(false);
+    });
+
+    it('should still reject a null instant, which is not a time', () => {
+      for (const field of ['created', 'updated', 'expiry', 'startTime', 'endTime']) {
+        expect(EventData.safeParse({ ...storedEvent(), [field]: null }).success).toBe(false);
+      }
+    });
+  });
+});

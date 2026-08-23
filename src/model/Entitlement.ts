@@ -98,7 +98,7 @@ export namespace Entitlement {
      * re-claimed, and a caller collapsing the two loses the distinction between
      * "never attempted" and "attempted and did not work".
      */
-    status?: Status;
+    status?: Status | null;
     /**
      * Stable identity of the entitlement being conferred, independent of which
      * purchase attempt conferred it.
@@ -107,7 +107,7 @@ export namespace Entitlement {
      * value here, which is what lets a duplicate be recognised as a duplicate
      * rather than as a second purchase.
      */
-    entitlement?: string;
+    entitlement?: string | null;
     /**
      * Token identifying the delivery that currently holds the claim.
      *
@@ -115,7 +115,7 @@ export namespace Entitlement {
      * delivery that lost its claim cannot write the outcome of work another
      * delivery has since completed.
      */
-    ownerToken?: string;
+    ownerToken?: string | null;
   }
 
   /**
@@ -158,15 +158,15 @@ export namespace Entitlement {
     /**
      * See {@link Interface.status}. Validated against {@link Status}.
      */
-    status: z.enum(Status).optional(),
+    status: z.enum(Status).nullish(),
     /**
      * See {@link Interface.entitlement}.
      */
-    entitlement: nonEmptyString().max(512).optional(),
+    entitlement: nonEmptyString().max(512).nullish(),
     /**
      * See {@link Interface.ownerToken}.
      */
-    ownerToken: token().optional(),
+    ownerToken: token().nullish(),
   });
 
   /**

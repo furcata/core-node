@@ -425,3 +425,113 @@ describe('Price.Schema', () => {
     });
   });
 });
+
+/**
+ * Regression cover for the defect that stored `null` used to trigger.
+ *
+ * Firestore stores an absent optional field as an explicit `null` under common
+ * write patterns, so a schema built only from `.optional()` rejected the very
+ * documents it existed to validate. The fixture below reproduces the field
+ * layout of a real stored price — the same keys, with `null` in the same places
+ * — carrying entirely synthetic values.
+ *
+ * The layout is the load-bearing part. A fixture that used `undefined` where a
+ * stored document has `null` parses identically under `.optional()` and
+ * `.nullish()`, so it would assert nothing at all: that is precisely how this
+ * defect survived.
+ */
+describe('Price.Schema against the stored document layout', () => {
+  /**
+   * A stored price with the optional fields written as explicit `null`.
+   *
+   * `active` and `update` are undeclared keys that stored documents carry; they
+   * are here so the fixture exercises the loose-object policy at the same time.
+   *
+   * @return {Record<string, unknown>} A price document in stored form.
+   */
+  const storedPrice = (): Record<string, unknown> => ({
+    id: 'price_synthetic',
+    account: 'account_synthetic',
+    amount: 2500,
+    currency: 'usd',
+    label: 'Synthetic ticket',
+    type: Price.Type.event,
+    visibility: Price.Visibility.public,
+    users: [],
+    uid: null,
+    limit: null,
+    description: null,
+    image: null,
+    source: null,
+    booked: 0,
+    checkout: 0,
+    clicks: 0,
+    views: 0,
+    active: true,
+    update: false,
+    backup: false,
+    created: '2026-01-01T00:00:00.000Z',
+    updated: '2026-01-01T00:00:00.000Z',
+  });
+
+  it('should parse a stored price whose absent optionals are explicit null', () => {
+    expect(Price.safeParse(storedPrice()).success).toBe(true);
+  });
+
+  it('should parse a stored price with every non-required declared field null', () => {
+    const everyOptionalNull: Record<string, unknown> = { account: 'account_synthetic' };
+    for (const key of Object.keys(Price.Schema.shape)) {
+      if (['account', 'created', 'updated', 'expiry'].includes(key)) continue;
+      everyOptionalNull[key] = null;
+    }
+    expect(Price.safeParse(everyOptionalNull).success).toBe(true);
+  });
+
+  it('should preserve null rather than folding it into undefined', () => {
+    const parsed = Price.parse(storedPrice());
+    expect(parsed.limit).toBeNull();
+    expect('limit' in parsed).toBe(true);
+  });
+
+  it('should leave a null limit meaning unlimited under a nullish-coalescing read', () => {
+    const parsed = Price.parse(storedPrice());
+    expect(parsed.limit ?? Number.POSITIVE_INFINITY).toBe(Number.POSITIVE_INFINITY);
+    expect((parsed.booked ?? 0) < (parsed.limit ?? Number.POSITIVE_INFINITY)).toBe(true);
+  });
+
+  it('should survive a round-trip with the nulls and the undeclared keys intact', () => {
+    const parsed = Price.parse(Price.parse(storedPrice()));
+    expect(parsed.limit).toBeNull();
+    expect(parsed['active']).toBe(true);
+  });
+
+  describe('the loosening is bounded to null and nothing else', () => {
+    it('should still reject a wrongly typed value in a field that now accepts null', () => {
+      for (const [field, wrong] of [['limit', '100'], ['amount', 'free'], ['currency', 'dollars'], ['users', 'uid_synthetic']] as const) {
+        expect(Price.safeParse({ ...storedPrice(), [field]: wrong }).success).toBe(false);
+      }
+    });
+
+    it('should still reject a fractional or negative counter in a field that now accepts null', () => {
+      for (const field of ['limit', 'clicks', 'views', 'checkout', 'booked']) {
+        expect(Price.safeParse({ ...storedPrice(), [field]: 1.5 }).success).toBe(false);
+        expect(Price.safeParse({ ...storedPrice(), [field]: -1 }).success).toBe(false);
+      }
+    });
+
+    it('should still reject an unrecognised enum member in a field that now accepts null', () => {
+      expect(Price.safeParse({ ...storedPrice(), type: 'subscription' }).success).toBe(false);
+      expect(Price.safeParse({ ...storedPrice(), visibility: 'everyone' }).success).toBe(false);
+    });
+
+    it('should still reject a null account, because a required field carrying null is the absence it exists to stop', () => {
+      expect(Price.safeParse({ ...storedPrice(), account: null }).success).toBe(false);
+    });
+
+    it('should still reject a null audit timestamp, which is not a time', () => {
+      for (const field of ['created', 'updated', 'expiry']) {
+        expect(Price.safeParse({ ...storedPrice(), [field]: null }).success).toBe(false);
+      }
+    });
+  });
+});

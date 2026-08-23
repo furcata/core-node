@@ -19,13 +19,13 @@ export interface BaseFirestore {
   /**
    * Firestore document identifier, typically the auto-generated document ID.
    */
-  id?: string;
+  id?: string | null;
   /**
    * Backup status flag for long-term historical storage.
    * When `true`, the document has been successfully backed up to the
    * historical long-term database. When `false`, the backup is still pending.
    */
-  backup?: boolean;
+  backup?: boolean | null;
   /**
    * Server-side timestamp recorded when the document was first created.
    */
@@ -63,16 +63,30 @@ export interface BaseFirestore {
  * at the boundary instead, where it can actually be checked. See
  * {@link auditTimestamp} for the shapes accepted, what is rejected, and how to
  * widen a schema for a write payload.
+ *
+ * {@link BaseFirestore.id} and {@link BaseFirestore.backup} are `.nullish()`,
+ * because a stored document writes an unset optional field as an explicit
+ * `null` rather than omitting it, and a field that accepted only `undefined`
+ * would reject documents that are otherwise entirely well formed.
+ *
+ * The three timestamps are deliberately **not** `.nullish()` and keep rejecting
+ * `null`. An explicitly null timestamp is not a time: read as one it becomes
+ * epoch zero, which sorts first and — for {@link BaseFirestore.expiry}, a TTL —
+ * expires the document immediately. No stored null was observed in any of the
+ * three, so the exemption costs nothing today. If one is ever observed, the fix
+ * is a decision about what a null instant means, recorded here, rather than a
+ * blanket loosening. The `nullRejecting` inventory in
+ * `test/interface/schema.test.ts` is what holds that line.
  */
 export const baseFirestoreShape = {
   /**
    * See {@link BaseFirestore.id}.
    */
-  id: documentId().optional(),
+  id: documentId().nullish(),
   /**
    * See {@link BaseFirestore.backup}.
    */
-  backup: z.boolean().optional(),
+  backup: z.boolean().nullish(),
   /**
    * See {@link BaseFirestore.created}.
    */

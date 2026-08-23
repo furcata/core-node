@@ -63,41 +63,46 @@ export namespace Price {
      * Price amount expressed in the smallest currency unit (e.g., cents for
      * USD) to avoid floating-point rounding errors.
      */
-    amount?: number;
+    amount?: number | null;
     /**
      * ISO 4217 currency code for this price (e.g., `"usd"`, `"eur"`).
      */
-    currency?: string;
+    currency?: string | null;
     /**
      * Firestore document ID of the parent product or event that this price is
      * associated with.
      */
     // The product this price is associated with
-    source?: string;
+    source?: string | null;
     /**
      * URL of the primary display image for this price (e.g., product photo or
      * event cover art).
      */
-    image?: string;
+    image?: string | null;
     /**
      * Short display name shown to buyers during the checkout flow.
      */
-    label?: string;
+    label?: string | null;
     /**
      * Longer description of what the buyer is purchasing, displayed on the
      * checkout and confirmation pages.
      */
-    description?: string;
+    description?: string | null;
     /**
      * Maximum number of users that may purchase this price; enforced by Cloud
-     * Functions during checkout. `undefined` means unlimited.
+     * Functions during checkout.
+     *
+     * Unlimited is expressed **both** ways in stored data: `null` in documents
+     * written by the usual path, and absent in older ones. Read it as
+     * `limit ?? Infinity` rather than testing for `undefined`, which answers
+     * `false` for the far more common of the two.
      */
     // Limit the number of users that can pay for this price
-    limit?: number;
+    limit?: number | null;
     /**
      * Item category for this price; see {@link Type} for accepted values.
      */
-    type?: Type;
+    type?: Type | null;
     /**
      * Firebase Auth UID of a specific user this price is restricted to, or
      * `null` for publicly purchasable prices.
@@ -106,30 +111,30 @@ export namespace Price {
     /**
      * Firebase Auth UIDs of users who have successfully purchased this price.
      */
-    users?: string[]; // user ids that have paid for this price
+    users?: string[] | null; // user ids that have paid for this price
     /**
      * Visibility scope of this price record; see {@link Visibility} for
      * accepted values.
      */
-    visibility?: Visibility;
+    visibility?: Visibility | null;
     /**
      * Cumulative number of times a link to this price has been clicked.
      */
     // Track
-    clicks?: number;
+    clicks?: number | null;
     /**
      * Cumulative number of times this price's detail page has been viewed.
      */
-    views?: number;
+    views?: number | null;
     /**
      * Cumulative number of users who initiated the checkout flow for this
      * price.
      */
-    checkout?: number;
+    checkout?: number | null;
     /**
      * Cumulative number of confirmed purchases for this price.
      */
-    booked?: number;
+    booked?: number | null;
   }
 
   /**
@@ -145,6 +150,15 @@ export namespace Price {
    * signature inherited from {@link BaseFirestore}: a stripping schema would
    * delete unrecognised fields on a read-modify-write, and a strict one would
    * reject documents written before this schema existed.
+   *
+   * Every optional field is `.nullish()` rather than `.optional()`, because a
+   * stored price writes its unset fields as an explicit `null` rather than
+   * omitting them — `limit`, `description` and `image` in particular. A schema
+   * that accepted only `undefined` rejected the documents it exists to
+   * validate. The loosening is bounded to `null` alone: a wrong type, a
+   * fractional counter and an unrecognised enum member are all still rejected,
+   * as are `null` on the required {@link Interface.account} and on the audit
+   * timestamps.
    */
   export const Schema = z.looseObject({
     ...baseFirestoreShape,
@@ -158,71 +172,71 @@ export namespace Price {
      * a finite number: this field is money, and a silent `NaN` is the defect
      * this schema exists to stop.
      */
-    amount: finiteNumber().optional(),
+    amount: finiteNumber().nullish(),
     /**
      * See {@link Interface.currency}. Constrained to a three-letter ISO 4217
      * code, which is a genuinely closed grammar rather than a convention.
      */
-    currency: z.string().regex(/^[A-Za-z]{3}$/, {error: 'Expected a three-letter ISO 4217 currency code'}).optional(),
+    currency: z.string().regex(/^[A-Za-z]{3}$/, {error: 'Expected a three-letter ISO 4217 currency code'}).nullish(),
     /**
      * See {@link Interface.source}.
      */
-    source: documentId().optional(),
+    source: documentId().nullish(),
     /**
      * See {@link Interface.image}.
      */
-    image: nonEmptyString().optional(),
+    image: nonEmptyString().nullish(),
     /**
      * See {@link Interface.label}.
      */
-    label: z.string().optional(),
+    label: z.string().nullish(),
     /**
      * See {@link Interface.description}.
      */
-    description: z.string().optional(),
+    description: z.string().nullish(),
     /**
-     * See {@link Interface.limit}. Absent means unlimited; a present value is a
-     * whole number of buyers, so a fractional limit is rejected.
+     * See {@link Interface.limit}. `null` or absent means unlimited; a present
+     * value is a whole number of buyers, so a fractional limit is rejected.
      */
-    limit: counter().optional(),
+    limit: counter().nullish(),
     /**
      * See {@link Interface.type}. Validated against {@link Type} rather than
      * asserted into it, so an unrecognised item category fails here instead of
      * routing post-payment logic down the wrong branch.
      */
-    type: z.enum(Type).optional(),
+    type: z.enum(Type).nullish(),
     /**
      * See {@link Interface.uid}. Explicitly nullable: `null` means publicly
      * purchasable and must survive a JSON round-trip, which `undefined` would
      * not.
      */
-    uid: z.string().nullable().optional(),
+    uid: z.string().nullish(),
     /**
      * See {@link Interface.users}.
      */
-    users: z.array(z.string()).optional(),
+    users: z.array(z.string()).nullish(),
     /**
      * See {@link Interface.visibility}. Validated against {@link Visibility},
      * so an unrecognised value cannot widen access by failing an equality check
      * against `private`.
      */
-    visibility: z.enum(Visibility).optional(),
+    visibility: z.enum(Visibility).nullish(),
     /**
      * See {@link Interface.clicks}.
      */
-    clicks: counter().optional(),
+    clicks: counter().nullish(),
     /**
      * See {@link Interface.views}.
      */
-    views: counter().optional(),
+    views: counter().nullish(),
     /**
      * See {@link Interface.checkout}.
      */
-    checkout: counter().optional(),
+    checkout: counter().nullish(),
     /**
      * See {@link Interface.booked}.
      */
-    booked: counter().optional(),
+    booked: counter().nullish(),
   });
 
   /**

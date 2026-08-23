@@ -98,14 +98,14 @@ export declare namespace Idempotency {
          * of work another process has since redone. Absent once the record has
          * settled.
          */
-        ownerToken?: string;
+        ownerToken?: string | null;
         /**
          * Number of times this key has been claimed, including the first.
          *
          * Increments each time a lapsed lease is reclaimed, so a value climbing
          * without the record settling indicates a handler that keeps dying mid-flight.
          */
-        attempts?: number;
+        attempts?: number | null;
         /**
          * Durable, operation-specific checkpoints retained across failed attempts and
          * lease reclaims, so a retried handler can skip work that already succeeded.
@@ -114,12 +114,12 @@ export declare namespace Idempotency {
          * no checkpoint has been recorded yet, which is not the same as the operation
          * having no steps.
          */
-        progress?: Record<string, unknown>;
+        progress?: Record<string, unknown> | null;
         /**
          * Outcome of the original attempt, present only once
          * {@link Interface.state} is {@link State.completed}.
          */
-        response?: Response;
+        response?: Response | null;
         /**
          * Instant at which the current holder's lease lapses, after which another
          * attempt may reclaim the key.
@@ -149,17 +149,17 @@ export declare namespace Idempotency {
     const Schema: z.ZodObject<{
         state: z.ZodEnum<typeof State>;
         requestHash: z.ZodString;
-        ownerToken: z.ZodOptional<z.ZodString>;
-        attempts: z.ZodOptional<z.ZodNumber>;
-        progress: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        response: z.ZodOptional<z.ZodObject<{
+        ownerToken: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        attempts: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        progress: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        response: z.ZodOptional<z.ZodNullable<z.ZodObject<{
             status: z.ZodInt;
             body: z.ZodNullable<z.ZodString>;
             truncated: z.ZodBoolean;
-        }, z.core.$loose>>;
+        }, z.core.$loose>>>;
         lockExpires: z.ZodOptional<z.ZodType<TimestampLike, TimestampLike, z.core.$ZodTypeInternals<TimestampLike, TimestampLike>>>;
-        id: z.ZodOptional<z.ZodString>;
-        backup: z.ZodOptional<z.ZodBoolean>;
+        id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        backup: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
         created: z.ZodOptional<z.ZodType<string | number | TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | TimestampLike | Date, unknown>>>;
         updated: z.ZodOptional<z.ZodType<string | number | TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | TimestampLike | Date, unknown>>>;
         expiry: z.ZodOptional<z.ZodType<string | number | TimestampLike | Date, unknown, z.core.$ZodTypeInternals<string | number | TimestampLike | Date, unknown>>>;

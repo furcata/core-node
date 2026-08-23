@@ -73,12 +73,12 @@ export namespace Block {
      * Optional display width hint in pixels for media blocks such as images
      * and videos.
      */
-    width?: number,
+    width?: number | null,
     /**
      * Optional display height hint in pixels for media blocks such as images
      * and videos.
      */
-    height?: number,
+    height?: number | null,
   }
 
   /**
@@ -126,11 +126,11 @@ export namespace Block {
     /**
      * See {@link Interface.width}. Whole pixels.
      */
-    width: counter().optional(),
+    width: counter().nullish(),
     /**
      * See {@link Interface.height}. Whole pixels.
      */
-    height: counter().optional(),
+    height: counter().nullish(),
   });
 
   /**
