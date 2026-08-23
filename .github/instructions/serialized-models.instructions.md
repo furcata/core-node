@@ -237,3 +237,12 @@ cannot report it. The boundary is *"types that admit arbitrary keys"*, not *"nul
 nullability guarantee restates cleanly as a presence union, an index signature does not restate at
 all. Before relying on omission, check which side of that line your type is on; the boundary is
 encoded as a test in `test-consumer/interface/base_db.consumer-boundary.ts`.
+
+A **second, independent** boundary sits alongside it: `T | null` is invisible to the consumer gate,
+because `null` is assignable to everything where `strictNullChecks` is off. That does not make
+`T | null` wrong — it is the right model for a field the store holds as `null`, and it is
+load-bearing for strict consumers — but it does mean the gate proves nothing about it. Where a
+nullability guarantee must hold **regardless** of the consumer's flags, restate it as
+`{has: true; value: T} | {has: false}`; property existence is config-independent. Measured and
+encoded in `test-consumer/interface/schema.consumer-nullability.ts`, together with the proof that
+the two boundaries are independent rather than one cause.
