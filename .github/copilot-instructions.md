@@ -223,9 +223,10 @@ Any update to the root `README.MD` must:
 >
 > **It is not blanket coverage.** Its mechanism is `TS2339`, which cannot fire on a type carrying an
 > index signature — so on the 10 declarations extending `BaseFirestore`, green means "cannot be
-> checked", not "is safe". That boundary is itself encoded as a test in
-> `test-consumer/interface/base_db.consumer-boundary.ts`; see
-> `.github/instructions/tests.instructions.md` §6.3.
+> checked", not "is safe". A second, independent blind spot: `T | null` collapses where
+> `strictNullChecks` is off, so the gate proves nothing about nullability either. Both boundaries are
+> themselves encoded as tests in `test-consumer/interface/`; see
+> `.github/instructions/tests.instructions.md` §6.3 and §6.4.
 
 > **CI gate:** `.github/workflows/nodejs.yml` runs on `push`/`pull_request` to `main` across Node
 > `22.x` and `24.x`, executing `npm ci` → `npm run build` → build-output drift check →

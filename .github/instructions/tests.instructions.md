@@ -277,5 +277,49 @@ both were mutation-validated:
 Do not "fix" the blind-spot half by making it error. Its **compiling is the assertion**, and it is
 not an endorsement.
 
+### 6.4 The second blind spot: `T | null` is invisible to this gate
+
+> 🔴 **The gate cannot observe nullability at all.** `null` is assignable to every type where
+> `strictNullChecks` is off — which is the condition the gate compiles under — so a `T | null` union
+> collapses and there is nothing left to check.
+
+Unlike §6.3 the mechanism is not broken here; it fires perfectly. It is simply that `T | null` is not
+a *property-existence* fact, and property existence is all this gate can see.
+
+**The two boundaries are independent, and were measured separately** — the obvious reading conflates
+them, because the nullable properties mostly live on document types that carry an index signature
+too. If the index signature were doing the hiding, the nullability question would be moot. It is not:
+`Idempotency.Response` has **no** index signature — proven in the same compilation, where an
+undeclared key on that exact type is still `TS2339` — and its `body: string | null` is still
+invisible. Same file, same declarations, both settings:
+
+| read | consumer settings | strict settings |
+|---|---|---|
+| `resp.body.toUpperCase()` where `body: string \| null` | **compiles** | `TS18047` |
+| `led.consumed + 1` where `consumed?: number \| null` | **compiles** | `TS18049` |
+| `resp.undeclaredKey` (no index signature) | `TS2339` | `TS2339` |
+
+The third row is the liveness control: the mechanism is demonstrably working in the run where the
+first two report nothing.
+
+**This is a statement about the gate, not about the types.** `T | null` is the right way to model a
+field the store genuinely holds as `null`, and it is load-bearing for every strict consumer. Just
+never cite a green `typecheck:consumer` as evidence about nullability.
+
+**The remedy, where a nullability guarantee must hold regardless of the consumer's flags:** restate
+it as presence/absence — `{has: true; value: T} | {has: false}` rather than `value: T | null`. Property
+existence is config-independent, so the restated form is enforceable where the union form is not.
+That is not a reason to go re-encode existing fields; the honest fix for a permissive consumer is for
+that consumer to enable `strictNullChecks`.
+
+`test-consumer/interface/schema.consumer-nullability.ts` encodes the boundary **and** the remedy as a
+paired fixture. Mutation-validated, control green in each:
+
+| mutation | gate | meaning |
+|---|---|---|
+| presence union regressed to `value: null` | **red** (`TS2322` + `TS2578`) | the restated form is genuinely enforceable |
+| flags drift strict (`--strictNullChecks`) | **red** (`TS18047`, `TS18049`) | the blind spot closed; update the fixture and this section |
+| the control's subject gains an index signature | **red** (`TS2578`) | the liveness control has stopped controlling |
+
 The rule this enforces is in
 [`serialized-models.instructions.md`](serialized-models.instructions.md) §8.
