@@ -232,3 +232,41 @@ Any update to the root `README.MD` must:
 > `22.x` and `24.x`, executing `npm ci` → `npm run build` → build-output drift check →
 > private-marker check → `npm test` → `npm run typecheck` → `npm run typecheck:consumer` →
 > `npm run typecheck:consumer:control`. Changes must keep all of these green.
+
+---
+
+## Model Usage Policy (GitHub Copilot Agent Orchestration)
+
+This repository uses a tiered model strategy to balance quality and cost.
+
+### Model Tiers
+
+| Task | Model | Location |
+|---|---|---|
+| Code completions, edits, refactors, file changes | `qwen2.5-coder:14b` | Local Ollama (`http://localhost:11434/v1`) |
+| Agentic workflows, multi-step tool use, file agents | `devstral` | Local Ollama (`http://localhost:11434/v1`) |
+| Orchestration, architecture, complex planning | Claude Opus | Cloud (paid) |
+| Escalation when local model is insufficient | Claude Sonnet | Cloud (paid) |
+
+### Rules
+
+1. **Always attempt with local model first.** Use `qwen2.5-coder:14b` for any code generation, completion, edit, or refactor task.
+2. **Use `devstral` for agentic tasks.** Any task involving multiple tool calls, file traversal, or multi-step reasoning should use `devstral` via local Ollama.
+3. **Child sessions MUST use local models.** When spawned as a child/worker session by an orchestrator, always use the local Ollama endpoint. Never default to a cloud model in a child session.
+4. **Escalate to cloud only when necessary.** Escalate to Claude Sonnet or Opus only if the local model fails after 1 retry, or the task requires cross-repo architectural reasoning.
+5. **Log escalations.** When switching to a cloud model, state: `"Escalating to [model] because [reason]"` so cost is visible.
+
+### Local Ollama Endpoint
+
+- **URL:** `http://localhost:11434/v1`
+- **Models available:** `qwen2.5-coder:14b`, `devstral`
+- **API key:** `ollama`
+
+### Orchestration Model
+
+```
+Orchestrator (parent session)  →  Claude Opus    [planning, architecture, decisions]
+  └─ child session             →  devstral       [agentic file work, tool calls]
+  └─ child session             →  qwen2.5-coder  [completions, edits, refactors]
+  └─ boost (if needed)         →  Claude Sonnet  [hard problems, retry escalation]
+```
