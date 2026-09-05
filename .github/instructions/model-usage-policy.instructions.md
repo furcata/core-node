@@ -134,12 +134,6 @@ Each task summary must include:
 - If a session reports `Static context is using >100% of available input tokens`, immediately reduce loaded MCP servers, strip nonessential context, or escalate to a paid model.
 - Keep orchestrator kickoff prompts short and self-contained; reference file paths instead of re-pasting large documents.
 
-## Daily human-effort cap (stainlessai + colchis)
-- For stainlessai/colchis work, enforce a shared cap of 10 estimated human-hours per day across both orgs.
-- Before starting new groups, compute completed + planned effort and remaining capacity (`10h - completed`).
-- If planned work exceeds remaining capacity, prioritize critical tasks, defer non-critical work, and split large tasks to fit remaining capacity.
-- Daily summary must report: estimated human-hours completed, deferred, remaining capacity, and deferred repos/tasks.
-
 ## Session lifecycle and remote trace elimination
 - After task completion, delete child sessions (not only archive) to remove remote trace.
 - Archive is local cleanup only.
