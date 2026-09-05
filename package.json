@@ -5,7 +5,7 @@
   "types": "./lib/**.d.ts",
   "author": "Erny Sans",
   "version": "1.0.0",
-  "private": false,
+  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/furcata/core-node.git"
