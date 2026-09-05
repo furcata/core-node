@@ -48,12 +48,12 @@ member's value produced **3 failed, exit 1**.
 
 ## 2. Commands
 
-| Purpose | Command |
-|---|---|
-| Run the suite once (CI mode) | `npm test` → `vitest run` |
-| Watch | `npx vitest` |
-| Coverage | `npx vitest run --coverage` |
-| **Type-level check (required)** | `npm run typecheck` → `tsc -p ./tsconfig.test.json` |
+| Purpose                                  | Command                                                          |
+|------------------------------------------|------------------------------------------------------------------|
+| Run the suite once (CI mode)             | `npm test` → `vitest run`                                        |
+| Watch                                    | `npx vitest`                                                     |
+| Coverage                                 | `npx vitest run --coverage`                                      |
+| **Type-level check (required)**          | `npm run typecheck` → `tsc -p ./tsconfig.test.json`              |
 | **Consumer-conditions check (required)** | `npm run typecheck:consumer` → `tsc -p ./tsconfig.consumer.json` |
 
 > ⚠️ `npx vitest run --typecheck` is **not** the type gate. Vitest's `typecheck.include` defaults
@@ -101,13 +101,13 @@ Before claiming a test protects something, prove it can go red:
 
 Choose the mutation to match the gate you are validating:
 
-| Mutation | Caught by `npm test`? | Caught by `npm run typecheck`? |
-|---|---|---|
-| Change an enum member's **value** | ✅ yes | no |
-| Remove an enum member | ✅ yes | ✅ yes |
-| Delete an **interface field** | ❌ **no** | ✅ yes |
-| Assign a wrong type in a test | ❌ no | ✅ yes |
-| Remove a barrel `export *` | ✅ yes | ✅ yes |
+| Mutation                          | Caught by `npm test`? | Caught by `npm run typecheck`? |
+|-----------------------------------|-----------------------|--------------------------------|
+| Change an enum member's **value** | ✅ yes                | no                             |
+| Remove an enum member             | ✅ yes                | ✅ yes                         |
+| Delete an **interface field**     | ❌ **no**             | ✅ yes                         |
+| Assign a wrong type in a test     | ❌ no                 | ✅ yes                         |
+| Remove a barrel `export *`        | ✅ yes                | ✅ yes                         |
 
 The two ❌ rows are precisely why both commands are required, and why a green `npm test` on its own
 must never be reported as proof that a type change is safe.
@@ -123,8 +123,8 @@ When the thing under test is a type, assert against something with runtime exist
   a member is quietly dropped, which a per-member test cannot do.
 - **Barrel exports** — import the barrel and assert the expected names are present. This catches a
   dropped `export *`, which is otherwise invisible until a consumer breaks.
-- **Runtime schemas**, once present — assert that a valid object parses, that an invalid one is
-  **rejected**, and that an unknown key is **rejected rather than silently dropped**. A schema test
+- **Runtime schemas**, once present — assert that a valid object parses, that an invalid one is **rejected**, and that
+  an unknown key is **rejected rather than silently dropped**. A schema test
   asserting only the happy path is vacuous in the most dangerous way: it passes identically whether
   the schema is strict or wide open. Always include the rejection case, and positive-control it by
   confirming the valid case still parses.
@@ -141,10 +141,10 @@ and be completely inert under the other.
 `test-consumer/` closes that. It is not a Vitest suite and is never executed: the compile *is* the
 test. Two projects, two jobs:
 
-| project | script | fixture | must |
-|---|---|---|---|
-| `tsconfig.consumer.json` | `npm run typecheck:consumer` | `*.consumer-unguarded.ts` (and everything else) | exit `0`, meaning every `@ts-expect-error` was needed |
-| `tsconfig.consumer-control.json` | `npm run typecheck:consumer:control` | `*.consumer-guarded.ts` only | exit `0` **always** |
+| project                          | script                               | fixture                                         | must                                                  |
+|----------------------------------|--------------------------------------|-------------------------------------------------|-------------------------------------------------------|
+| `tsconfig.consumer.json`         | `npm run typecheck:consumer`         | `*.consumer-unguarded.ts` (and everything else) | exit `0`, meaning every `@ts-expect-error` was needed |
+| `tsconfig.consumer-control.json` | `npm run typecheck:consumer:control` | `*.consumer-guarded.ts` only                    | exit `0` **always**                                   |
 
 Both compile against the **built `lib/*.d.ts`**, reached through the package's own `exports` map,
 with `strictNullChecks` and `noImplicitAny` **off**. The control project `extends` the gate's own
@@ -227,12 +227,12 @@ produces no error at all and the directive goes unused. That asymmetry is the wh
 Validated with a 2×2 rather than a single cell, because **the obvious one-cell experiment gives the
 wrong answer and would have been reported as a success**:
 
-| `ParseFailure` | strict assertion form in `test/` | `npm run typecheck` | `typecheck:consumer` | `typecheck:consumer:control` |
-|---|---|---|---|---|
-| property omitted (as shipped) | shallow `result.data` | green `0` | green `0` | green `0` |
-| `data?: undefined` | shallow `result.data` | **red `2`** | **red `2`** | green `0` |
-| property omitted (as shipped) | deep `result.data.amount` | green `0` | green `0` | green `0` |
-| `data?: undefined` | deep `result.data.amount` | **green `0`** | **red `2`** | green `0` |
+| `ParseFailure`                | strict assertion form in `test/` | `npm run typecheck` | `typecheck:consumer` | `typecheck:consumer:control` |
+|-------------------------------|----------------------------------|---------------------|----------------------|------------------------------|
+| property omitted (as shipped) | shallow `result.data`            | green `0`           | green `0`            | green `0`                    |
+| `data?: undefined`            | shallow `result.data`            | **red `2`**         | **red `2`**          | green `0`                    |
+| property omitted (as shipped) | deep `result.data.amount`        | green `0`           | green `0`            | green `0`                    |
+| `data?: undefined`            | deep `result.data.amount`        | **green `0`**       | **red `2`**          | green `0`                    |
 
 Row 2 is why "reintroduce the marker and watch only the new gate fail" does not work: the existing
 assertions read the **shallow** property, and `Property 'data' does not exist` fires under every
@@ -255,8 +255,8 @@ vacuous.
 > not *"is safe"*.
 
 `BaseFirestore` declares `[x: string]: any` deliberately, so stored documents predating a change
-still type-check. Measured on the shipped declarations: **10** declarations in `lib/` extend it
-(control on a nonsense base name: `0`), and every one is outside the gate's reach — including the
+still type-check. Measured on the shipped declarations: **10** declarations in `lib/` extend it (control on a nonsense
+base name: `0`), and every one is outside the gate's reach — including the
 document types.
 
 The boundary is **not** "nullable fields cannot be protected": any nullability guarantee can be
@@ -269,9 +269,9 @@ unprotectable; `Idempotency.Response` does not and is protectable.
 folklore, so it outlives everyone who currently knows it. Both directions are self-announcing, and
 both were mutation-validated:
 
-| mutation | gate | control | meaning |
-|---|---|---|---|
-| index signature **added** to a protected type | **red** (`TS2322` + `TS2578`) | green `0` | that type just left coverage silently |
+| mutation                                         | gate                            | control   | meaning                                                    |
+|--------------------------------------------------|---------------------------------|-----------|------------------------------------------------------------|
+| index signature **added** to a protected type    | **red** (`TS2322` + `TS2578`)   | green `0` | that type just left coverage silently                      |
 | index signature **removed** from `BaseFirestore` | **red** (`TS2322` ×2, `TS2339`) | green `0` | the blind spot closed; update the fixture and this section |
 
 Do not "fix" the blind-spot half by making it error. Its **compiling is the assertion**, and it is
@@ -293,11 +293,11 @@ too. If the index signature were doing the hiding, the nullability question woul
 undeclared key on that exact type is still `TS2339` — and its `body: string | null` is still
 invisible. Same file, same declarations, both settings:
 
-| read | consumer settings | strict settings |
-|---|---|---|
-| `resp.body.toUpperCase()` where `body: string \| null` | **compiles** | `TS18047` |
-| `led.consumed + 1` where `consumed?: number \| null` | **compiles** | `TS18049` |
-| `resp.undeclaredKey` (no index signature) | `TS2339` | `TS2339` |
+| read                                                   | consumer settings | strict settings |
+|--------------------------------------------------------|-------------------|-----------------|
+| `resp.body.toUpperCase()` where `body: string \| null` | **compiles**      | `TS18047`       |
+| `led.consumed + 1` where `consumed?: number \| null`   | **compiles**      | `TS18049`       |
+| `resp.undeclaredKey` (no index signature)              | `TS2339`          | `TS2339`        |
 
 The third row is the liveness control: the mechanism is demonstrably working in the run where the
 first two report nothing.
@@ -315,11 +315,11 @@ that consumer to enable `strictNullChecks`.
 `test-consumer/interface/schema.consumer-nullability.ts` encodes the boundary **and** the remedy as a
 paired fixture. Mutation-validated, control green in each:
 
-| mutation | gate | meaning |
-|---|---|---|
-| presence union regressed to `value: null` | **red** (`TS2322` + `TS2578`) | the restated form is genuinely enforceable |
-| flags drift strict (`--strictNullChecks`) | **red** (`TS18047`, `TS18049`) | the blind spot closed; update the fixture and this section |
-| the control's subject gains an index signature | **red** (`TS2578`) | the liveness control has stopped controlling |
+| mutation                                       | gate                           | meaning                                                    |
+|------------------------------------------------|--------------------------------|------------------------------------------------------------|
+| presence union regressed to `value: null`      | **red** (`TS2322` + `TS2578`)  | the restated form is genuinely enforceable                 |
+| flags drift strict (`--strictNullChecks`)      | **red** (`TS18047`, `TS18049`) | the blind spot closed; update the fixture and this section |
+| the control's subject gains an index signature | **red** (`TS2578`)             | the liveness control has stopped controlling               |
 
 The rule this enforces is in
 [`serialized-models.instructions.md`](serialized-models.instructions.md) §8.

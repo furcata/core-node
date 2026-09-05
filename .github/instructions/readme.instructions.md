@@ -27,8 +27,8 @@ prose is where it is most tempting to be helpful:
 
 - **What this package is** — a shared TypeScript type package: Firestore document shapes, enums
   and queue contracts. Not a deployable service; it has no runtime logic and no I/O.
-- **Architecture** — the `src/model/` and `src/interface/` split, the two entry points
-  (`./model`, `./interface`), and the `src/` → `lib/` build relationship.
+- **Architecture** — the `src/model/` and `src/interface/` split, the two entry points (`./model`, `./interface`), and
+  the `src/` → `lib/` build relationship.
 - **🔴 The committed build output.** `lib/` is committed and consumers execute it; there is no
   `prepare` script. Any change to `src/` requires `npm run build` and the regenerated `lib/`
   committed **in the same commit**. This must be prominent, not a footnote — it is the single

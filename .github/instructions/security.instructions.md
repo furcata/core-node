@@ -21,8 +21,8 @@ This package has no runtime logic, no I/O and no network access, so it cannot it
 at runtime. Its security surface is **the contract it publishes**: the types every consumer
 compiles against, the build output consumers actually execute, and the dependency closure it drags
 into every consumer. Attacks land through *permissiveness* (a type that stops warning anyone),
-through *supply chain* (an unpinned dependency, a stale committed artifact), and through
-*disclosure* (this repository is public and its consumers are not).
+through *supply chain* (an unpinned dependency, a stale committed artifact), and through *disclosure* (this repository
+is public and its consumers are not).
 
 ---
 
@@ -33,18 +33,18 @@ implicit timestamp, and a claim about a dependency or a count is stale the momen
 
 ### 2.1 Type permissiveness
 
-| Class | Count in `src/` | Status |
-|---|---|---|
-| `T \| any` union | **0** | Clean. A previous change removed these; verified not regressed. |
-| bare `any` | **8** | Known and accepted for now — see below. |
-| `Function` / `Object` / bare `{}` | **0** | Clean. |
-| spread after a literal key | **0** | Not applicable — this package has no object literals. |
-| `eval` / `new Function` | **0** | Clean. |
-| `process.env` access | **0** | Clean — the package reads no environment. |
-| secret-like field names | **0** | Clean. |
+| Class                             | Count in `src/` | Status                                                          |
+|-----------------------------------|-----------------|-----------------------------------------------------------------|
+| `T \| any` union                  | **0**           | Clean. A previous change removed these; verified not regressed. |
+| bare `any`                        | **8**           | Known and accepted for now — see below.                         |
+| `Function` / `Object` / bare `{}` | **0**           | Clean.                                                          |
+| spread after a literal key        | **0**           | Not applicable — this package has no object literals.           |
+| `eval` / `new Function`           | **0**           | Clean.                                                          |
+| `process.env` access              | **0**           | Clean — the package reads no environment.                       |
+| secret-like field names           | **0**           | Clean.                                                          |
 
-The 8 bare `any` are **not** arbitrary. Six are timestamp fields
-(`base_db.ts` `created`/`updated`/`expiry`, `Account.ts` `domainTimestamp`,
+The 8 bare `any` are **not** arbitrary. Six are timestamp fields (`base_db.ts` `created`/`updated`/`expiry`,
+`Account.ts` `domainTimestamp`,
 `EventData.ts` `startTime`/`endTime`), whose honest type is a three-way union of "read value",
 "write sentinel" and "serialized string". Writing that precisely requires the server SDK's
 `FieldValue` type, which **is not a dependency of this package and should not become one** — a
@@ -64,8 +64,8 @@ Three settings previously meant the compiler and linter were **more permissive t
 Two have since been corrected; the remaining one is recorded so nobody mistakes a green build for a
 strictness guarantee:
 
-- `eslint.config.js` sets `@typescript-eslint/no-explicit-any: ['off']` — an explicit `any` is
-  **not** a lint error here. Still current.
+- `eslint.config.js` sets `@typescript-eslint/no-explicit-any: ['off']` — an explicit `any` is **not** a lint error
+  here. Still current.
 - `tsconfig.json` sets `"strict": true`, and **no longer overrides it**: `noImplicitAny` and
   `strictNullChecks` are both `true`. They were previously `false`, which meant `strict: true` was
   not the final word — the later, narrower keys won. Any claim about this repository written before
@@ -78,8 +78,8 @@ Any claim that "strict mode would have caught it" must be checked against these 
 
 ### 2.3 Dependencies
 
-- The single runtime dependency is a **public** package, declared as a `github:` dependency
-  **without a `#ref`**. It therefore floats to whatever the default branch points at when someone
+- The single runtime dependency is a **public** package, declared as a `github:` dependency **without a `#ref`**. It
+  therefore floats to whatever the default branch points at when someone
   runs `npm install`. `package-lock.json` pins the resolved commit, so `npm ci` — which is what CI
   runs — is reproducible and green. **That is exactly what makes the float easy to miss:** nothing
   surfaces it until a plain `npm install` silently moves the dependency.
@@ -152,8 +152,8 @@ authorship. Run it locally before pushing:
 ./.github/scripts/check-private-markers.sh --self-test  # prove the patterns still detect
 ```
 
-It self-tests on every run, so a pass means the patterns were demonstrated rather than trusted.
-**It holds no exemption for itself** — a marker written inside the script is caught like any other,
+It self-tests on every run, so a pass means the patterns were demonstrated rather than trusted. **It holds no exemption
+for itself** — a marker written inside the script is caught like any other,
 verified by planting one and watching the check cite the script's own line number. Keep it that
 way: an exempted path is a place a real marker can hide.
 

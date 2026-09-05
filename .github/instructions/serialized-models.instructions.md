@@ -39,12 +39,12 @@ it is a wrong shape replicated into every consumer.
   shape that stored documents do not have. A schema built from `.optional()` rejects `null`, which
   means it rejects the very documents it exists to validate — measured at 25/25 stored `account`
   documents and 12/12 stored `price` documents before this was fixed.
-  - Declare `.nullish()` on the schema field **and** `| null` on the interface property, together.
-    They are one change. A schema that accepts `null` while the interface promises it cannot occur
-    is the runtime-versus-declaration mismatch that no amount of type checking can see.
-  - The inventory in `test/interface/schema.test.ts` (`nullRejecting`) enforces this. It is
-    deliberately a **reject-list**, so it shrinks toward empty and a blanket loosening turns it
-    red — an accept-list would silently grow instead.
+    - Declare `.nullish()` on the schema field **and** `| null` on the interface property, together.
+      They are one change. A schema that accepts `null` while the interface promises it cannot occur
+      is the runtime-versus-declaration mismatch that no amount of type checking can see.
+    - The inventory in `test/interface/schema.test.ts` (`nullRejecting`) enforces this. It is
+      deliberately a **reject-list**, so it shrinks toward empty and a blanket loosening turns it
+      red — an accept-list would silently grow instead.
 - **`?` and `| null` mean different things, and a stored field is usually both.** `?` is "the key
   may not be present"; `| null` is "the key is present and explicitly empty, and that must survive
   a JSON round-trip" — `undefined` keys are dropped by `JSON.stringify`, `null` keys are not. Both
@@ -53,14 +53,14 @@ it is a wrong shape replicated into every consumer.
   through a folding schema deletes the stored field, and `x === undefined` and `'key' in obj` give
   different answers for the two.
 - **Two exemptions, and only these two.** Both are inventoried in the test above:
-  - A **required** field never accepts `null`. A required field carrying `null` is exactly the
-    load-bearing absence the requirement exists to stop.
-  - An **instant-valued** field — anything validated by `auditTimestamp()` or `timestampLike()` —
-    stays `.optional()` and keeps rejecting `null`. An explicitly null timestamp is not a time, and
-    reading one as epoch zero sorts it first and expires it immediately. No stored null was
-    observed in any of these fields, so this exemption costs nothing today; if one is ever
-    observed, the fix is a documented decision about what a null instant means, **not** a blanket
-    loosening.
+    - A **required** field never accepts `null`. A required field carrying `null` is exactly the
+      load-bearing absence the requirement exists to stop.
+    - An **instant-valued** field — anything validated by `auditTimestamp()` or `timestampLike()` —
+      stays `.optional()` and keeps rejecting `null`. An explicitly null timestamp is not a time, and
+      reading one as epoch zero sorts it first and expires it immediately. No stored null was
+      observed in any of these fields, so this exemption costs nothing today; if one is ever
+      observed, the fix is a documented decision about what a null instant means, **not** a blanket
+      loosening.
 - **Validating an inbound payload is a different job from reading a stored document.** No schema in
   this package currently validates an HTTP body, a callable `data` argument or a webhook payload —
   every `parse`/`safeParse` here is a stored-document boundary. If one is ever added, `.optional()`
@@ -81,11 +81,11 @@ it is a wrong shape replicated into every consumer.
 Timestamp fields are the hardest shape in this package and the reason most of its remaining `any`
 types exist. A Firestore timestamp is genuinely three things depending on direction:
 
-| Direction | Runtime value |
-|---|---|
-| Read from the datastore | a `Timestamp` / `Date` |
+| Direction                | Runtime value                           |
+|--------------------------|-----------------------------------------|
+| Read from the datastore  | a `Timestamp` / `Date`                  |
 | Written to the datastore | a server sentinel (`serverTimestamp()`) |
-| Serialized for transport | an ISO 8601 `string` |
+| Serialized for transport | an ISO 8601 `string`                    |
 
 Writing that union precisely requires the server SDK's `FieldValue` type, which **is not a
 dependency of this package and must not become one** — a pure type package should not pull a
