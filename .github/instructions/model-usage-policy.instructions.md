@@ -26,7 +26,7 @@
 
 ## Default model routing
 **Orchestration (default: PAID model)**
-- Start with the cheapest suitable paid model (e.g., GPT-4 mini, Claude Haiku, or equivalent low-cost tier).
+- Start with the cheapest suitable paid model tier (a low-cost hosted tier, not the most powerful by default).
 - Define task groups, acceptance criteria, and constraints per group.
 
 **Execution routing (dynamic: PAID or LOCAL)**
@@ -37,7 +37,7 @@
 - If local execution fails or exceeds budget, escalate immediately to paid model.
 
 ## Local-model task coverage (when to use)
-- Use only the local model ID `devstral-64k:latest` for local child sessions.
+- Use a local agentic/tool-calling model for local child sessions, discovered at runtime from the local endpoint.
 - Use local models for deterministic, well-scoped code/test/refactor/file tasks with clear acceptance criteria and expected completion in 2-10 minutes.
 - Escalate to paid when time budget is exceeded, tool-calling is unreliable, cross-cutting reasoning is required, or two local attempts fail on the same blocker.
 
@@ -84,7 +84,7 @@ Every child kickoff must include:
 Local child session payloads must be stripped down to the raw request plus only the extremely necessary context. Do not include MCP server data, plugin details, tool schemas, or any other extra runtime metadata. The parent session is responsible for pruning the prompt aggressively so the local agent gets only what it absolutely needs for the task.
 
 ## Main-session tracking & reporting (required)
-- Track per child session: commit metadata (title/SHA/repo/branch), execution timing (start/end/duration), estimated manual effort (with basis), and model cost accounting (models used, token usage if available, and actual or clearly-labeled estimated USD cost with confidence).
+- Track per child session: commit metadata (title/SHA/repo/branch), execution timing (start/end/duration), and model cost accounting (tiers used, token usage if available, and actual or clearly-labeled estimated USD cost with confidence).
 
 ## Required output format after each completed task
 Provide a per-task table with columns:
@@ -92,18 +92,16 @@ Provide a per-task table with columns:
 - Repo/Branch
 - Commit Title
 - Commit SHA
-- Model(s) Used
+- Model Tier(s) Used
 - Start Time
 - End Time
 - Duration
-- Est. Human Time
 - Actual/Estimated Cost (USD)
 - Notes
 
 Also provide rolling totals:
 - Total child tasks completed
 - Total elapsed runtime
-- Total estimated human time saved
 - Total cost (USD), split by local vs paid
 
 ## Mandatory prompt-quality retrospective
@@ -129,7 +127,7 @@ Each task summary must include:
 
 ## Local model context window management
 - Local child sessions have very limited context windows; static context from MCP schema, plugins, tool data, or large instruction files can exhaust input capacity.
-- For local child sessions: use only the model ID `devstral-64k:latest`; do not include MCP server data, plugins, or any other runtime metadata in the child prompt.
+- For local child sessions: use a local agentic/tool-calling model discovered at runtime; do not include MCP server data, plugins, or any other runtime metadata in the child prompt.
 - The parent session must provide only the necessary context for the task and keep it as minimal as possible; when in doubt, prefer a raw request plus exact file paths over a larger summary.
 - If a session reports `Static context is using >100% of available input tokens`, immediately reduce loaded MCP servers, strip nonessential context, or escalate to a paid model.
 - Keep orchestrator kickoff prompts short and self-contained; reference file paths instead of re-pasting large documents.
