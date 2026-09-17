@@ -231,6 +231,10 @@ relied upon.
 
 ## 6. Working as an agent in this repository
 
+> **Before anything in this section applies, run the Session Start Identity Gate** in
+> [`AGENTS.md`](../../AGENTS.md) §0 (also in `.github/copilot-instructions.md` §0), and work within
+> the Change Scope Guardrails in `AGENTS.md` §2.
+
 - **One session ≈ one branch ≈ one PR.** Scope to a single unit of work.
 - **Assign file ownership explicitly** when several sessions edit this repo in parallel, and state
   which paths are off-limits.

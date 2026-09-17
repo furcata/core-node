@@ -2,7 +2,7 @@
 
 ## Rules (compressed)
 
-- Use only `devstral-64k:latest` for local child sessions
+- Use a local agentic/tool-calling model for local child sessions, discovered at runtime from the local endpoint
 - Target completion: 2–4 min (small), 5–8 min (medium), 8–10 min (heavy)
 - If local task exceeds 10 min or fails twice, escalate to paid model immediately
 - Local child sessions receive only the raw request and the minimum necessary repo context; never include MCP server
@@ -27,11 +27,11 @@
 ## Blocked?
 
 - Escalate to paid model immediately
-- State: `Switching to [model] because [reason]`
+- State: `Switching to [tier] because [reason]`
 
 ## For Paid Orchestrators
 
-If you're a paid orchestrator (Claude/paid Copilot model), load the full Model Usage Policy:
+If you're a paid orchestrator (a hosted model session), load the full Model Usage Policy:
 
 ```
 cat .github/instructions/model-usage-policy.instructions.md

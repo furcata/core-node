@@ -10,7 +10,7 @@ Before proceeding, you MUST:
 2. Analyze the requested work and break it into task groups
 3. For each group, estimate:
     - Complexity (small/medium/heavy)
-    - Suitable model (local 7B/14B vs paid)
+    - Suitable tier (local vs paid)
     - Time budget (2-4 min small, 5-8 min medium, 8-10 min heavy)
     - Escalation triggers
 4. Present the complete plan to the user and wait for approval
@@ -18,8 +18,8 @@ Before proceeding, you MUST:
 ## Cost-First Routing
 
 - **Paid orchestrator** (you): planning, coordination, complex decisions
-- **Local child sessions**: fast deterministic work (code edits, tests, commits) within time budgets using model ID
-  `devstral-64k:latest`
+- **Local child sessions**: fast deterministic work (code edits, tests, commits) within time budgets using a local
+  agentic/tool-calling model discovered at runtime from the local endpoint
 - **Escalation to paid**: if local exceeds 10 min or fails twice
 
 ## Key Rules
@@ -29,7 +29,7 @@ Before proceeding, you MUST:
 - Child session prompts must be raw requests plus the minimally necessary context only; never include MCP server data,
   plugins, tool metadata, or large instruction dumps
 - Never add co-author trailers — work is attributed to the human user
-- Track all child sessions: commit SHAs, timing, estimated human hours, actual cost
+- Track all child sessions: commit SHAs, timing, actual cost
 
 ## Your Kickoff
 
