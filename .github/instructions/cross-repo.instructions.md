@@ -238,6 +238,15 @@ relied upon.
 - **One session ≈ one branch ≈ one PR.** Scope to a single unit of work.
 - **Assign file ownership explicitly** when several sessions edit this repo in parallel, and state
   which paths are off-limits.
+- **Verify repository scope before repository actions.** Before any commit, push, or pull-request
+  action, check `git remote -v` (or an equivalent authoritative source) and confirm that the remote
+  matches the exact repository named by the task. Never infer this from the working directory alone.
+- **State child repository scope.** When orchestrating child sessions across repositories, include the
+  exact repository each child may modify in that child's task.
+- **Keep authorization repository-specific.** Permission to change one repository does not authorize
+  making the same change in another repository for consistency or any similar reason.
+- **Stop on repository ambiguity.** If the task does not clearly identify its repository, ask before
+  taking action.
 - **Push back on instructions that are wrong.** Treat a coordinator's suggestion that touches a
   security invariant as a *question about the invariant* rather than an instruction — the question
   form is self-cancelling when it turns out to be wrong. Some of the most valuable outcomes come

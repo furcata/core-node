@@ -112,6 +112,17 @@ Never run `npm publish`, never add a publish or release workflow, and never intr
 script that would build or publish on install. If a release is genuinely needed, that is a
 maintainer decision to raise — not an agent action.
 
+## 0.3 Multi-Repo / Multi-Session Guardrail (Critical)
+
+- **Verify the target before repository actions.** Before any commit, push, or pull-request action,
+  check `git remote -v` (or an equivalent authoritative source) and confirm that the remote matches
+  the exact repository named by the task. Never assume.
+- **Scope child sessions explicitly.** An orchestrator that creates child sessions across repositories
+  must state each child's exact repository scope in its task.
+- **Keep authorization repository-specific.** Permission to make a change in one repository does not
+  authorize a matching change in another repository, including for consistency.
+- **Stop on ambiguity.** If a task does not clearly identify its repository, ask before acting.
+
 ---
 
 
