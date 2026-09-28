@@ -73,6 +73,7 @@ cron/lib
 ## Others
 ############################################
 ignore-*.*
+/:memory:.ses
 
 
 # Ignore all github worflows by default
